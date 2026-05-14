@@ -6,7 +6,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import CommentForm, TicketCreateForm, TicketUpdateForm
 from .models import AuditLog, Category, Ticket
-from .utils import create_audit_log, is_support_or_admin, send_status_change_email, support_users_queryset
+from accounts.permissions import is_support_or_admin
+from .utils import create_audit_log, send_status_change_email, support_users_queryset
 
 
 def ticket_queryset_for_user(user):
