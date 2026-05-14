@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div><h1 class="h2 fw-bold text-green mb-1">Dashboard</h1><p class="text-muted mb-0">Track support work and incident progress.</p></div>
+  <a class="btn btn-green" href="{% url 'ticket_create' %}">+ New Ticket</a>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="metric-card"><span>Total</span><strong>{{ total_tickets }}</strong></div></div>
+  <div class="col-md-3"><div class="metric-card"><span>Open</span><strong>{{ open_tickets }}</strong></div></div>
+  {% if is_staff_role %}
+    <div class="col-md-3"><div class="metric-card danger"><span>Critical</span><strong>{{ critical_tickets }}</strong></div></div>
+    <div class="col-md-3"><div class="metric-card warning"><span>Unassigned</span><strong>{{ unassigned_tickets }}</strong></div></div>
+  {% else %}
+    <div class="col-md-3"><div class="metric-card"><span>In progress</span><strong>{{ in_progress_tickets }}</strong></div></div>
+    <div class="col-md-3"><div class="metric-card success"><span>Resolved/Closed</span><strong>{{ resolved_tickets }}</strong></div></div>
+  {% endif %}
+</div>
+{% if is_staff_role %}{% include 'tickets/_filters.html' %}{% endif %}
+<h2 class="h5 fw-bold mb-3">{% if is_staff_role %}Recently updated tickets{% else %}Your recent tickets{% endif %}</h2>
+{% include 'tickets/_ticket_table.html' %}
+{% endblock %}

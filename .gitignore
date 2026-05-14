@@ -1,0 +1,11 @@
+.env
+*.sqlite3
+db.sqlite3
+/media/*
+!/media/.gitkeep
+/staticfiles/
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
