@@ -66,9 +66,9 @@ class Ticket(models.Model):
         return f"#{self.pk} {self.title}"
 
     def save(self, *args, **kwargs):
-        if self.status in {self.STATUS_RESOLVED, self.STATUS_CLOSED} and self.closed_at is None:
+        if self.status == self.STATUS_CLOSED and self.closed_at is None:
             self.closed_at = timezone.now()
-        if self.status not in {self.STATUS_RESOLVED, self.STATUS_CLOSED}:
+        if self.status != self.STATUS_CLOSED:
             self.closed_at = None
         super().save(*args, **kwargs)
 
@@ -106,3 +106,18 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action} on {self.ticket} at {self.timestamp:%Y-%m-%d %H:%M}"
+
+    @property
+    def readable_message(self):
+        actor = self.actor.get_full_name() or self.actor.username if self.actor else "System"
+        action_labels = {
+            self.ACTION_CREATED: "created this ticket",
+            self.ACTION_COMMENT: "added a comment",
+            self.ACTION_STATUS: "changed status",
+            self.ACTION_PRIORITY: "changed priority",
+            self.ACTION_ASSIGNMENT: "changed assignment",
+        }
+        action = action_labels.get(self.action, self.action.replace("_", " "))
+        if self.field_changed:
+            return f"{actor} {action} from {self.old_value or 'blank'} to {self.new_value or 'blank'}."
+        return f"{actor} {action}."
