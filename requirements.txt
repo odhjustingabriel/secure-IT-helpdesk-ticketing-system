@@ -1,5 +1,5 @@
-# Full/production-style dependencies.
-# For simple local SQLite setup, you may install requirements-local.txt instead.
 Django>=5.0,<5.3
 psycopg[binary]>=3.1,<4.0
+python-dotenv>=1.0,<2.0
+dj-database-url>=2.1,<3.0
 gunicorn>=21.2,<24.0

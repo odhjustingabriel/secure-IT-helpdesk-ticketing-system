@@ -1,6 +1,6 @@
 # Secure IT Helpdesk Ticketing System
 
-A clean, portfolio-ready Django MVP for internal IT helpdesk and incident ticket workflow management. The project is designed to run as a normal Django app first, with SQLite for the easiest local setup. Docker/PostgreSQL support is optional for people who want it later. The project focuses on role-based access control, audit logging, secure-by-default configuration, email notifications, and a professional Bootstrap 5 interface with dark green security-oriented branding.
+A clean, portfolio-ready Django MVP for internal IT helpdesk and incident ticket workflow management. The project focuses on role-based access control, audit logging, secure-by-default configuration, email notifications, and a professional Bootstrap 5 interface with dark green security-oriented branding.
 
 ## Features
 
@@ -15,7 +15,7 @@ A clean, portfolio-ready Django MVP for internal IT helpdesk and incident ticket
 - Audit logging for ticket creation, comments, status changes, priority changes, and assignment changes.
 - File attachment validation with a 5 MB limit and common document/image type allowlist.
 - Seed command for realistic demo data.
-- Local-first SQLite setup that only requires Django; optional Docker Compose/PostgreSQL setup remains available.
+- Docker Compose with PostgreSQL and SQLite fallback for local development.
 - GitHub Actions workflow for checks, migrations, and tests.
 
 ## Screenshots
@@ -31,10 +31,10 @@ A clean, portfolio-ready Django MVP for internal IT helpdesk and incident ticket
 - **Backend:** Django
 - **Frontend:** Django Templates
 - **Styling:** Bootstrap 5 and custom CSS
-- **Database:** SQLite by default for local Django setup; optional PostgreSQL with `DATABASE_URL`
+- **Database:** PostgreSQL via Docker; SQLite fallback when `DATABASE_URL` is not set
 - **Testing:** Django `TestCase`
 - **Automation:** GitHub Actions
-- **Containerization:** Optional Docker and Docker Compose
+- **Containerization:** Docker and Docker Compose
 - **Configuration:** environment variables via `.env` / `.env.example`
 
 ## Architecture Overview
@@ -50,39 +50,7 @@ media/       Local upload target for ticket attachments
 
 The app intentionally uses simple function-based views and Django forms so the business rules are easy to inspect. Permission checks are enforced in views rather than only by hiding buttons in templates.
 
-## Quick Start: Fully Django, No Docker Required
-
-> **Important:** run Django commands from the project folder that contains `manage.py`. Use `python manage.py migrate`, not `python -m manage migrate` and not `python -m manage.py migrate`.
-
-### Windows PowerShell
-
-```powershell
-cd D:\HOC\secure-IT-helpdesk-ticketing-system
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-py -m pip install --upgrade pip
-py -m pip install -r requirements-local.txt
-Copy-Item .env.example .env
-py manage.py migrate
-py manage.py seed_demo
-py manage.py runserver
-```
-
-Then open <http://127.0.0.1:8000/>.
-
-If your terminal command starts with `python -m manage.py`, it will fail because `manage.py` is a script filename, not a Python package path. The correct command is:
-
-```powershell
-py manage.py migrate
-```
-
-If `py` is not available on your Windows machine, use `python` instead:
-
-```powershell
-python manage.py migrate
-```
-
-### macOS / Linux
+## Setup Without Docker
 
 1. Create a virtual environment:
 
@@ -94,7 +62,7 @@ python manage.py migrate
 2. Install dependencies:
 
    ```bash
-   pip install -r requirements-local.txt
+   pip install -r requirements.txt
    ```
 
 3. Create your local environment file:
@@ -120,9 +88,9 @@ python manage.py migrate
 
 7. Open <http://127.0.0.1:8000/>.
 
-## Optional Setup With Docker
+## Setup With Docker
 
-Docker is not required for normal local use. If you already know Docker and want PostgreSQL, build and start the app with:
+1. Build and start the app with PostgreSQL:
 
    ```bash
    docker compose up --build
@@ -152,33 +120,6 @@ Docker is not required for normal local use. If you already know Docker and want
 | `DEFAULT_FROM_EMAIL` | Sender address | Helpdesk default |
 | `SESSION_COOKIE_SECURE` / `CSRF_COOKIE_SECURE` | Secure cookie flags | Enable behind HTTPS |
 
-## Common Command Mistakes
-
-### `No module named manage`
-
-This usually means one of two things:
-
-1. You are not inside the project folder that contains `manage.py`. Run `dir` on Windows or `ls` on macOS/Linux and confirm that `manage.py` is visible.
-2. You used the wrong command form. Use `python manage.py migrate` or `py manage.py migrate`. Do **not** use `python -m manage.py migrate`.
-
-Correct Windows example:
-
-```powershell
-cd D:\HOC\secure-IT-helpdesk-ticketing-system
-py manage.py migrate
-```
-
-Correct macOS/Linux example:
-
-```bash
-cd /path/to/secure-IT-helpdesk-ticketing-system
-python manage.py migrate
-```
-
-### Python 3.14 note
-
-If dependency installation fails with a brand-new Python version, install a stable Python version commonly supported by Django, such as Python 3.12, create a fresh virtual environment, and rerun the local setup commands.
-
 ## Demo Accounts
 
 Run `python manage.py seed_demo` first.
@@ -193,8 +134,6 @@ Run `python manage.py seed_demo` first.
 Admin users can also access Django Admin at `/admin/`.
 
 ## Running Tests
-
-After activating your virtual environment and installing dependencies:
 
 ```bash
 python manage.py check
@@ -235,4 +174,4 @@ This is intentionally an MVP. It does **not** include chat, real-time notificati
 
 ## Portfolio Summary
 
-Secure IT Helpdesk Ticketing System is a Django portfolio MVP demonstrating role-based access control, audit logging, status workflow management, secure configuration practices, simple SQLite-first local development, optional Dockerized PostgreSQL deployment, and meaningful automated tests. It is designed to be easy to run, easy to review, and realistic enough to represent an internal IT support application.
+Secure IT Helpdesk Ticketing System is a Django portfolio MVP demonstrating role-based access control, audit logging, status workflow management, secure configuration practices, Dockerized PostgreSQL deployment, and meaningful automated tests. It is designed to be easy to run, easy to review, and realistic enough to represent an internal IT support application.
