@@ -6,6 +6,7 @@ from django.utils import timezone
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -55,6 +56,7 @@ class Ticket(models.Model):
         related_name="assigned_tickets",
     )
     attachment = models.FileField(upload_to="ticket_attachments/%Y/%m/", blank=True, null=True)
+    resolution_note = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     closed_at = models.DateTimeField(null=True, blank=True)
@@ -66,9 +68,9 @@ class Ticket(models.Model):
         return f"#{self.pk} {self.title}"
 
     def save(self, *args, **kwargs):
-        if self.status in {self.STATUS_RESOLVED, self.STATUS_CLOSED} and self.closed_at is None:
+        if self.status == self.STATUS_CLOSED and self.closed_at is None:
             self.closed_at = timezone.now()
-        if self.status not in {self.STATUS_RESOLVED, self.STATUS_CLOSED}:
+        if self.status != self.STATUS_CLOSED:
             self.closed_at = None
         super().save(*args, **kwargs)
 
@@ -92,6 +94,8 @@ class AuditLog(models.Model):
     ACTION_PRIORITY = "changed_priority"
     ACTION_ASSIGNMENT = "assigned_ticket"
     ACTION_COMMENT = "added_comment"
+    ACTION_RESOLUTION_ADDED = "added_resolution_note"
+    ACTION_RESOLUTION_UPDATED = "updated_resolution_note"
 
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="audit_logs")
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, null=True, blank=True, related_name="audit_logs")
@@ -106,3 +110,20 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action} on {self.ticket} at {self.timestamp:%Y-%m-%d %H:%M}"
+
+    @property
+    def readable_message(self):
+        actor = self.actor.get_full_name() or self.actor.username if self.actor else "System"
+        action_labels = {
+            self.ACTION_CREATED: "created this ticket",
+            self.ACTION_COMMENT: "added a comment",
+            self.ACTION_STATUS: "changed status",
+            self.ACTION_PRIORITY: "changed priority",
+            self.ACTION_ASSIGNMENT: "changed assignment",
+            self.ACTION_RESOLUTION_ADDED: "added a resolution note",
+            self.ACTION_RESOLUTION_UPDATED: "updated the resolution note",
+        }
+        action = action_labels.get(self.action, self.action.replace("_", " "))
+        if self.field_changed:
+            return f"{actor} {action} from {self.old_value or 'blank'} to {self.new_value or 'blank'}."
+        return f"{actor} {action}."

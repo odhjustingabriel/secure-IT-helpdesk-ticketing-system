@@ -1,13 +1,10 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="row justify-content-center"><div class="col-lg-7">
-  <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-4">
-    <h1 class="h3 fw-bold text-green">Manage ticket</h1>
-    <p class="text-muted">{{ ticket.title }}</p>
-    <form method="post">{% csrf_token %}
-      {% for field in form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endfor %}
-      <button class="btn btn-green">Save Changes</button> <a class="btn btn-outline-secondary" href="{% url 'ticket_detail' ticket.pk %}">Back</a>
-    </form>
-  </div></div>
-</div></div>
+<section class="form-shell panel">
+  <p class="eyebrow">Support management</p><h1>Manage ticket</h1><p class="muted">{{ ticket.title }}</p>
+  <form method="post">{% csrf_token %}
+    {% for field in form %}<div class="form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>{% endfor %}
+    <div class="actions"><button class="button primary">Save Changes</button><a class="button outline" href="{% url 'ticket_detail' ticket.pk %}">Back</a></div>
+  </form>
+</section>
 {% endblock %}
