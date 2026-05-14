@@ -6,11 +6,17 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import CommentForm, TicketCreateForm, TicketUpdateForm
 from .models import AuditLog, Category, Ticket
-from .utils import create_audit_log, is_support_or_admin, send_status_change_email, support_users_queryset
+from accounts.permissions import is_support_or_admin
+from .utils import create_audit_log, send_status_change_email, support_users_queryset
 
 
 def ticket_queryset_for_user(user):
-    qs = Ticket.objects.select_related("category", "created_by", "assigned_to")
+    qs = Ticket.objects.select_related("category", "created_by", "assigned_to").defer(
+        "resolution_note",
+        "category__description",
+        "category__is_active",
+        "category__created_at",
+    )
     if is_support_or_admin(user):
         return qs
     return qs.filter(created_by=user)
@@ -44,7 +50,7 @@ def dashboard(request):
     context = {
         "is_staff_role": is_support_or_admin(request.user),
         "tickets": filtered_tickets[:10],
-        "categories": Category.objects.all(),
+        "categories": Category.objects.only("id", "name"),
         "support_users": support_users_queryset(),
         "priority_choices": Ticket.PRIORITY_CHOICES,
         "status_choices": Ticket.STATUS_CHOICES,
@@ -74,7 +80,7 @@ def ticket_list(request):
         "tickets/ticket_list.html",
         {
             "tickets": qs,
-            "categories": Category.objects.all(),
+            "categories": Category.objects.only("id", "name"),
             "support_users": support_users_queryset(),
             "priority_choices": Ticket.PRIORITY_CHOICES,
             "status_choices": Ticket.STATUS_CHOICES,
@@ -141,6 +147,7 @@ def ticket_update(request, pk):
     old_status = ticket.status
     old_priority = ticket.priority
     old_assigned_to = ticket.assigned_to
+    old_resolution_note = ticket.resolution_note or ""
     if request.method == "POST":
         form = TicketUpdateForm(request.POST, instance=ticket)
         if form.is_valid():
@@ -159,6 +166,10 @@ def ticket_update(request, pk):
                     old_assigned_to.username if old_assigned_to else "Unassigned",
                     updated.assigned_to.username if updated.assigned_to else "Unassigned",
                 )
+            new_resolution_note = updated.resolution_note or ""
+            if old_resolution_note != new_resolution_note:
+                action = AuditLog.ACTION_RESOLUTION_UPDATED if old_resolution_note else AuditLog.ACTION_RESOLUTION_ADDED
+                create_audit_log(request.user, updated, action)
             messages.success(request, "Ticket updated.")
             return redirect("ticket_detail", pk=updated.pk)
     else:

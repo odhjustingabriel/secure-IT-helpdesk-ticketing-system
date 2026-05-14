@@ -18,10 +18,13 @@ class Command(BaseCommand):
         }
         created_users = {}
         for username, (password, role, is_staff, is_superuser, email) in users.items():
-            user, created = User.objects.get_or_create(username=username, defaults={"email": email, "is_staff": is_staff, "is_superuser": is_superuser})
+            user, created = User.objects.get_or_create(username=username, defaults={"email": email})
+            user.email = email
+            user.is_staff = is_staff
+            user.is_superuser = is_superuser
             if created:
                 user.set_password(password)
-                user.save()
+            user.save()
             profile, _ = Profile.objects.get_or_create(user=user)
             profile.role = role
             profile.save()

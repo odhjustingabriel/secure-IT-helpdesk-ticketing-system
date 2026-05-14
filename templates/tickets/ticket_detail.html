@@ -1,29 +1,28 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="row g-4">
-  <div class="col-lg-8">
-    <div class="card border-0 shadow-sm rounded-4 mb-4"><div class="card-body p-4">
-      <div class="d-flex justify-content-between align-items-start gap-3">
-        <div><h1 class="h3 fw-bold text-green">{{ ticket.title }}</h1><p class="text-muted mb-0">Created {{ ticket.created_at|date:'M d, Y H:i' }} by {{ ticket.created_by.username }}</p></div>
-        {% if is_staff_role %}<a class="btn btn-outline-green" href="{% url 'ticket_update' ticket.pk %}">Manage</a>{% endif %}
-      </div>
-      <hr>
-      <div class="mb-3"><span class="badge status-{{ ticket.status }}">{{ ticket.get_status_display }}</span> <span class="badge priority-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span></div>
-      <p class="ticket-description">{{ ticket.description|linebreaksbr }}</p>
-      {% if ticket.attachment %}<a href="{{ ticket.attachment.url }}" class="btn btn-sm btn-outline-secondary">View attachment</a>{% endif %}
-    </div></div>
-    <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-4">
-      <h2 class="h5 fw-bold text-green">Comments</h2>
-      {% for comment in comments %}<div class="comment"><div class="small text-muted">{{ comment.author.username }} · {{ comment.created_at|date:'M d, Y H:i' }}</div><div>{{ comment.body|linebreaksbr }}</div></div>{% empty %}<p class="text-muted">No comments yet.</p>{% endfor %}
-      <form method="post" class="mt-3">{% csrf_token %}{{ comment_form.body }}{% for error in comment_form.body.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}<button class="btn btn-green mt-2">Add Comment</button></form>
-    </div></div>
-  </div>
-  <div class="col-lg-4">
-    <div class="card border-0 shadow-sm rounded-4 mb-4"><div class="card-body p-4">
-      <h2 class="h5 fw-bold text-green">Ticket info</h2>
-      <dl class="row small"><dt class="col-5">Category</dt><dd class="col-7">{{ ticket.category.name }}</dd><dt class="col-5">Assigned</dt><dd class="col-7">{{ ticket.assigned_to.username|default:'Unassigned' }}</dd><dt class="col-5">Updated</dt><dd class="col-7">{{ ticket.updated_at|date:'M d, Y H:i' }}</dd><dt class="col-5">Closed</dt><dd class="col-7">{{ ticket.closed_at|date:'M d, Y H:i'|default:'Not closed' }}</dd></dl>
-    </div></div>
-    {% if is_staff_role %}<div class="card border-0 shadow-sm rounded-4"><div class="card-body p-4"><h2 class="h5 fw-bold text-green">Audit log</h2>{% for log in audit_logs %}<div class="audit-item"><strong>{{ log.action }}</strong><div class="small text-muted">{{ log.actor.username|default:'System' }} · {{ log.timestamp|date:'M d, Y H:i' }}</div>{% if log.field_changed %}<div class="small">{{ log.field_changed }}: {{ log.old_value }} → {{ log.new_value }}</div>{% endif %}</div>{% empty %}<p class="text-muted">No audit records.</p>{% endfor %}</div></div>{% endif %}
-  </div>
+<div class="detail-grid">
+  <section>
+    <article class="panel ticket-hero">
+      <div class="split"><div><p class="eyebrow">Ticket #{{ ticket.pk }}</p><h1>{{ ticket.title }}</h1><p class="muted">Created {{ ticket.created_at|date:'M d, Y H:i' }} by {{ ticket.created_by.username }}</p></div>{% if is_staff_role %}<a class="button outline" href="{% url 'ticket_update' ticket.pk %}">Manage ticket</a>{% endif %}</div>
+      <div class="badge-row"><span class="badge status-{{ ticket.status }}">{{ ticket.get_status_display }}</span><span class="badge priority-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span></div>
+      <div class="description">{{ ticket.description|linebreaksbr }}</div>
+      {% if ticket.attachment %}<a class="button outline" href="{{ ticket.attachment.url }}">View attachment</a>{% endif %}
+    </article>
+    {% if ticket.resolution_note %}
+    <article class="panel resolution-panel">
+      <h2>Resolution Note</h2>
+      <p>{{ ticket.resolution_note|linebreaksbr }}</p>
+    </article>
+    {% endif %}
+    <article class="panel comments-panel">
+      <h2>Comments</h2>
+      {% for comment in comments %}<div class="comment"><strong>{{ comment.author.username }}</strong><small>{{ comment.created_at|date:'M d, Y H:i' }}</small><p>{{ comment.body|linebreaksbr }}</p></div>{% empty %}<p class="muted">No comments yet.</p>{% endfor %}
+      <form method="post" class="comment-form">{% csrf_token %}{{ comment_form.body }}{% for error in comment_form.body.errors %}<div class="field-error">{{ error }}</div>{% endfor %}<button class="button primary">Add Comment</button></form>
+    </article>
+  </section>
+  <aside>
+    <article class="panel info-panel"><h2>Ticket info</h2><dl><dt>Category</dt><dd>{{ ticket.category.name }}</dd><dt>Creator</dt><dd>{{ ticket.created_by.username }}</dd><dt>Assigned staff</dt><dd>{{ ticket.assigned_to.username|default:'Unassigned' }}</dd><dt>Updated</dt><dd>{{ ticket.updated_at|date:'M d, Y H:i' }}</dd><dt>Closed</dt><dd>{{ ticket.closed_at|date:'M d, Y H:i'|default:'Not closed' }}</dd></dl></article>
+    {% if is_staff_role %}<article class="panel audit-panel"><h2>Audit log</h2>{% for log in audit_logs %}<div class="audit-item"><strong>{{ log.readable_message }}</strong><small>{{ log.timestamp|date:'M d, Y H:i' }}</small></div>{% empty %}<p class="muted">No audit records.</p>{% endfor %}</article>{% endif %}
+  </aside>
 </div>
 {% endblock %}
