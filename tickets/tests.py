@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import Profile
+from .utils import support_users_queryset
 from .models import AuditLog, Category, Comment, Ticket
 
 
@@ -31,6 +32,28 @@ class TicketWorkflowTests(TestCase):
             status=Ticket.STATUS_PENDING,
             created_by=self.user2,
         )
+
+
+    def test_active_categories_appear_in_ticket_creation_form(self):
+        self.client.login(username="user1", password="pass12345")
+        response = self.client.get(reverse("ticket_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.category, response.context["form"].fields["category"].queryset)
+
+    def test_inactive_categories_do_not_appear_in_ticket_creation_form(self):
+        inactive_category = Category.objects.create(name="Retired Systems", description="Old systems", is_active=False)
+        self.client.login(username="user1", password="pass12345")
+        response = self.client.get(reverse("ticket_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(inactive_category, response.context["form"].fields["category"].queryset)
+
+    def test_existing_ticket_with_inactive_category_still_displays(self):
+        self.category.is_active = False
+        self.category.save()
+        self.client.login(username="user1", password="pass12345")
+        response = self.client.get(reverse("ticket_detail", args=[self.ticket.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.category.name)
 
     def test_user_can_create_ticket(self):
         self.client.login(username="user1", password="pass12345")
@@ -117,3 +140,33 @@ class TicketWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Printer issue")
         self.assertNotContains(response, "VPN issue")
+
+
+class TicketAdminTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="Security", description="Security issues")
+        self.creator = User.objects.create_user("creator", email="creator@example.com", password="pass12345")
+        self.staff_user = User.objects.create_user("staffuser", email="staff@example.com", password="pass12345", is_staff=True)
+        self.normal_user = User.objects.create_user("normal", email="normal@example.com", password="pass12345")
+        self.admin = User.objects.create_superuser("admin", email="admin@example.com", password="adminpass12345")
+        self.ticket = Ticket.objects.create(
+            title="Screenshot attached",
+            description="Please review the attached screenshot.",
+            category=self.category,
+            priority=Ticket.PRIORITY_MEDIUM,
+            created_by=self.creator,
+            attachment="ticket_attachments/example.png",
+        )
+
+    def test_admin_assignment_queryset_includes_staff_not_normal_users(self):
+        assignable_users = support_users_queryset()
+        self.assertIn(self.staff_user, assignable_users)
+        self.assertIn(self.admin, assignable_users)
+        self.assertNotIn(self.normal_user, assignable_users)
+
+    def test_admin_ticket_change_page_shows_attachment_link_and_image_preview(self):
+        self.client.login(username="admin", password="adminpass12345")
+        response = self.client.get(reverse("admin:tickets_ticket_change", args=[self.ticket.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "example.png")
+        self.assertContains(response, "<img", html=False)

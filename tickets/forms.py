@@ -2,7 +2,7 @@ from pathlib import Path
 
 from django import forms
 
-from .models import Comment, Ticket
+from .models import Category, Comment, Ticket
 from .utils import support_users_queryset
 
 ALLOWED_ATTACHMENT_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".doc", ".docx"}
@@ -23,6 +23,7 @@ class TicketCreateForm(StyledFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = Category.objects.filter(is_active=True)
         self.fields["title"].widget.attrs["maxlength"] = 160
         self.fields["attachment"].help_text = "Optional PDF, PNG, JPG, TXT, DOC, or DOCX file up to 5 MB."
         self.apply_styles()
@@ -54,7 +55,8 @@ class TicketCreateForm(StyledFormMixin, forms.ModelForm):
 class TicketUpdateForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Ticket
-        fields = ["status", "priority", "assigned_to"]
+        fields = ["status", "priority", "assigned_to", "resolution_note"]
+        widgets = {"resolution_note": forms.Textarea(attrs={"rows": 4, "placeholder": "Summarize what was done to resolve or close this ticket."})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -142,6 +142,7 @@ def ticket_update(request, pk):
     old_status = ticket.status
     old_priority = ticket.priority
     old_assigned_to = ticket.assigned_to
+    old_resolution_note = ticket.resolution_note or ""
     if request.method == "POST":
         form = TicketUpdateForm(request.POST, instance=ticket)
         if form.is_valid():
@@ -160,6 +161,10 @@ def ticket_update(request, pk):
                     old_assigned_to.username if old_assigned_to else "Unassigned",
                     updated.assigned_to.username if updated.assigned_to else "Unassigned",
                 )
+            new_resolution_note = updated.resolution_note or ""
+            if old_resolution_note != new_resolution_note:
+                action = AuditLog.ACTION_RESOLUTION_UPDATED if old_resolution_note else AuditLog.ACTION_RESOLUTION_ADDED
+                create_audit_log(request.user, updated, action)
             messages.success(request, "Ticket updated.")
             return redirect("ticket_detail", pk=updated.pk)
     else:

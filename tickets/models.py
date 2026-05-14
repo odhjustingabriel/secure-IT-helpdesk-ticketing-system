@@ -6,6 +6,7 @@ from django.utils import timezone
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -55,6 +56,7 @@ class Ticket(models.Model):
         related_name="assigned_tickets",
     )
     attachment = models.FileField(upload_to="ticket_attachments/%Y/%m/", blank=True, null=True)
+    resolution_note = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     closed_at = models.DateTimeField(null=True, blank=True)
@@ -92,6 +94,8 @@ class AuditLog(models.Model):
     ACTION_PRIORITY = "changed_priority"
     ACTION_ASSIGNMENT = "assigned_ticket"
     ACTION_COMMENT = "added_comment"
+    ACTION_RESOLUTION_ADDED = "added_resolution_note"
+    ACTION_RESOLUTION_UPDATED = "updated_resolution_note"
 
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="audit_logs")
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, null=True, blank=True, related_name="audit_logs")

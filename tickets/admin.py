@@ -1,20 +1,66 @@
 from django.contrib import admin
+from django.utils.html import format_html
 
 from .models import AuditLog, Category, Comment, Ticket
+from .utils import support_users_queryset
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "created_at")
+    list_display = ("name", "is_active", "created_at")
+    list_filter = ("is_active",)
     search_fields = ("name", "description")
 
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "category", "priority", "status", "created_by", "assigned_to", "updated_at")
+    list_display = (
+        "id",
+        "title",
+        "category",
+        "priority",
+        "status",
+        "created_by",
+        "assigned_to",
+        "has_attachment",
+        "updated_at",
+    )
     list_filter = ("status", "priority", "category", "assigned_to")
     search_fields = ("title", "description", "created_by__username", "assigned_to__username")
-    readonly_fields = ("created_at", "updated_at", "closed_at")
+    readonly_fields = ("created_at", "updated_at", "closed_at", "attachment_link")
+    fieldsets = (
+        ("Ticket details", {"fields": ("title", "description", "category", "priority", "status", "resolution_note")}),
+        ("People", {"fields": ("created_by", "assigned_to")}),
+        ("Attachment", {"fields": ("attachment", "attachment_link")}),
+        ("Timestamps", {"fields": ("created_at", "updated_at", "closed_at")}),
+    )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "assigned_to":
+            kwargs["queryset"] = support_users_queryset()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    @admin.display(boolean=True, description="Attachment")
+    def has_attachment(self, obj):
+        return bool(obj.attachment)
+
+    @admin.display(description="Current attachment")
+    def attachment_link(self, obj):
+        if not obj or not obj.attachment:
+            return "No attachment uploaded."
+        url = obj.attachment.url
+        name = obj.attachment.name.rsplit("/", 1)[-1]
+        lower_name = name.lower()
+        if lower_name.endswith((".png", ".jpg", ".jpeg")):
+            return format_html(
+                '<a href="{}" target="_blank" rel="noopener">{}</a><br>'
+                '<img src="{}" alt="{}" style="max-width: 320px; max-height: 220px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd;" />',
+                url,
+                name,
+                url,
+                name,
+            )
+        return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', url, name)
 
 
 @admin.register(Comment)
