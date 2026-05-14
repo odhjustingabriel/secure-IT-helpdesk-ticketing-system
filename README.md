@@ -75,7 +75,8 @@ source .venv/bin/activate
 ### 2. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
 ### 3. Optional environment file
@@ -135,6 +136,24 @@ python manage.py test
 ```
 
 ## Troubleshooting
+
+### `ModuleNotFoundError: No module named 'django'`
+
+This means your virtual environment is active but Django has not been installed into it yet, or your terminal is using a different Python interpreter than the one where dependencies were installed. From the project root, run:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python manage.py migrate
+```
+
+On Windows, if you use the Python launcher, make sure it points at the same environment. The easiest option after activation is usually:
+
+```bash
+python manage.py migrate
+```
+
+If dependency installation fails on a very new Python version, use a stable Python version supported by Django 5.2, such as Python 3.12 or 3.13.
 
 ### `OperationalError: no such column` after pulling updates
 
