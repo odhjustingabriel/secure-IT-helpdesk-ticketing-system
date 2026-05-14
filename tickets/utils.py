@@ -1,22 +1,17 @@
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
+from django.db.models import Q
 from django.urls import reverse
 
 from accounts.models import Profile
+from accounts.permissions import is_support_or_admin
 from .models import AuditLog
 
 
-def is_support_or_admin(user):
-    if not user.is_authenticated:
-        return False
-    if user.is_superuser:
-        return True
-    profile = getattr(user, "profile", None)
-    return bool(profile and profile.role in {Profile.ROLE_SUPPORT, Profile.ROLE_ADMIN})
-
-
 def support_users_queryset():
-    return User.objects.filter(profile__role__in=[Profile.ROLE_SUPPORT, Profile.ROLE_ADMIN]).order_by("username")
+    return User.objects.filter(
+        Q(is_staff=True) | Q(profile__role__in=[Profile.ROLE_SUPPORT, Profile.ROLE_ADMIN])
+    ).distinct().order_by("username")
 
 
 def create_audit_log(actor, ticket, action, field_changed=None, old_value=None, new_value=None):
@@ -39,6 +34,7 @@ def send_status_change_email(request, ticket, old_status, new_status):
         f"Ticket: {ticket.title}\n"
         f"Old status: {old_status}\n"
         f"New status: {new_status}\n"
+        f"Updated by: {request.user.get_full_name() or request.user.username}\n"
         f"View ticket: {absolute_url}\n"
     )
     if ticket.created_by.email:
