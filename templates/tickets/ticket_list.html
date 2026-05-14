@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div><h1 class="h2 fw-bold text-green mb-1">Tickets</h1><p class="text-muted mb-0">{% if is_staff_role %}All helpdesk tickets.{% else %}Your submitted tickets.{% endif %}</p></div>
+  <a class="btn btn-green" href="{% url 'ticket_create' %}">+ New Ticket</a>
+</div>
+{% include 'tickets/_filters.html' %}
+{% include 'tickets/_ticket_table.html' %}
+{% endblock %}

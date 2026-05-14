@@ -1,0 +1,5 @@
+# Full/production-style dependencies.
+# For simple local SQLite setup, you may install requirements-local.txt instead.
+Django>=5.0,<5.3
+psycopg[binary]>=3.1,<4.0
+gunicorn>=21.2,<24.0
