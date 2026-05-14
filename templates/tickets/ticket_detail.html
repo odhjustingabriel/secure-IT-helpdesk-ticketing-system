@@ -8,6 +8,12 @@
       <div class="description">{{ ticket.description|linebreaksbr }}</div>
       {% if ticket.attachment %}<a class="button outline" href="{{ ticket.attachment.url }}">View attachment</a>{% endif %}
     </article>
+    {% if ticket.resolution_note %}
+    <article class="panel resolution-panel">
+      <h2>Resolution Note</h2>
+      <p>{{ ticket.resolution_note|linebreaksbr }}</p>
+    </article>
+    {% endif %}
     <article class="panel comments-panel">
       <h2>Comments</h2>
       {% for comment in comments %}<div class="comment"><strong>{{ comment.author.username }}</strong><small>{{ comment.created_at|date:'M d, Y H:i' }}</small><p>{{ comment.body|linebreaksbr }}</p></div>{% empty %}<p class="muted">No comments yet.</p>{% endfor %}

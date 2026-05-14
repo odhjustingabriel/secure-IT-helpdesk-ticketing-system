@@ -8,12 +8,14 @@ A clean, beginner-friendly Django MVP for internal IT support and incident ticke
 - Profile-based roles: `user`, `support`, and `admin`.
 - Normal users can create tickets, view their own tickets, and comment on their own tickets.
 - Support/admin users can view all tickets, filter queues, update status/priority, assign tickets, comment, and view audit logs.
-- Admin users can manage profiles, categories, tickets, comments, and audit logs in Django Admin.
+- Admin users can manage profiles, user roles, active/inactive categories, tickets, comments, and audit logs in Django Admin.
 - Ticket statuses: open, in progress, pending, resolved, closed.
 - Priority badges: low, medium, high, critical.
 - Optional ticket attachments with a 5 MB limit and safe extension allowlist.
 - Console email notification when support/admin changes ticket status.
-- Audit logs for ticket creation, comments, status changes, priority changes, and assignment changes.
+- Audit logs for ticket creation, comments, status changes, priority changes, assignment changes, and resolution note changes.
+- Admins can deactivate old categories without deleting historical ticket data.
+- Support/admin staff must provide a resolution note when resolving or closing a ticket.
 - Demo data seed command with repeat-safe user/category creation.
 - Real Django `TestCase` coverage for roles, permissions, workflow, filters, audit logs, and email.
 
@@ -132,6 +134,23 @@ python manage.py check
 python manage.py test
 ```
 
+## Troubleshooting
+
+### `OperationalError: no such column` after pulling updates
+
+This means your local SQLite database schema is behind the Django models. Stop the development server, run migrations, and start it again:
+
+```bash
+python manage.py migrate
+python manage.py runserver
+```
+
+For the latest demo data after migrations, you can also run:
+
+```bash
+python manage.py seed_demo
+```
+
 ## Security Features
 
 - CSRF protection is enabled through Django middleware and template tokens.
@@ -144,6 +163,9 @@ python manage.py test
 - No real secrets are committed; `.env` is ignored.
 - SQLite database and uploaded media are ignored by git.
 - Audit logs record important ticket actions.
+- Admins manage user roles through Django Admin profile records, not through a public user-facing page.
+- Inactive categories are hidden from new ticket forms while existing tickets keep their historical category.
+- Resolution notes are required before support/admin users can resolve or close tickets.
 
 ## Project Scope
 

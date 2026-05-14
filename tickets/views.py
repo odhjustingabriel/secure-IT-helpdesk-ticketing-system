@@ -11,7 +11,12 @@ from .utils import create_audit_log, send_status_change_email, support_users_que
 
 
 def ticket_queryset_for_user(user):
-    qs = Ticket.objects.select_related("category", "created_by", "assigned_to")
+    qs = Ticket.objects.select_related("category", "created_by", "assigned_to").defer(
+        "resolution_note",
+        "category__description",
+        "category__is_active",
+        "category__created_at",
+    )
     if is_support_or_admin(user):
         return qs
     return qs.filter(created_by=user)
@@ -45,7 +50,7 @@ def dashboard(request):
     context = {
         "is_staff_role": is_support_or_admin(request.user),
         "tickets": filtered_tickets[:10],
-        "categories": Category.objects.all(),
+        "categories": Category.objects.only("id", "name"),
         "support_users": support_users_queryset(),
         "priority_choices": Ticket.PRIORITY_CHOICES,
         "status_choices": Ticket.STATUS_CHOICES,
@@ -75,7 +80,7 @@ def ticket_list(request):
         "tickets/ticket_list.html",
         {
             "tickets": qs,
-            "categories": Category.objects.all(),
+            "categories": Category.objects.only("id", "name"),
             "support_users": support_users_queryset(),
             "priority_choices": Ticket.PRIORITY_CHOICES,
             "status_choices": Ticket.STATUS_CHOICES,

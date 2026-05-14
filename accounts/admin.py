@@ -6,6 +6,7 @@ from .models import Profile
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "role", "created_at", "updated_at")
-    list_filter = ("role", "created_at")
-    search_fields = ("user__username", "user__email", "user__first_name", "user__last_name")
+    list_filter = ("role",)
+    search_fields = ("user__username", "user__email")
+    ordering = ("user__username",)
     readonly_fields = ("created_at", "updated_at")
