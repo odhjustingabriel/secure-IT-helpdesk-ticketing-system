@@ -1,0 +1,10 @@
+<form class="card border-0 shadow-sm rounded-4 mb-4" method="get">
+  <div class="card-body row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label">Search</label><input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Title or description"></div>
+    <div class="col-md-2"><label class="form-label">Status</label><select class="form-select" name="status"><option value="">All</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label">Priority</label><select class="form-select" name="priority"><option value="">All</option>{% for value,label in priority_choices %}<option value="{{ value }}" {% if request.GET.priority == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label">Category</label><select class="form-select" name="category"><option value="">All</option>{% for category in categories %}<option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:'s' %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></div>
+    {% if is_staff_role %}<div class="col-md-2"><label class="form-label">Assigned</label><select class="form-select" name="assigned_to"><option value="">All</option><option value="unassigned" {% if request.GET.assigned_to == 'unassigned' %}selected{% endif %}>Unassigned</option>{% for staff in support_users %}<option value="{{ staff.id }}" {% if request.GET.assigned_to == staff.id|stringformat:'s' %}selected{% endif %}>{{ staff.username }}</option>{% endfor %}</select></div>{% endif %}
+    <div class="col-md-1"><button class="btn btn-green w-100">Filter</button></div>
+  </div>
+</form>

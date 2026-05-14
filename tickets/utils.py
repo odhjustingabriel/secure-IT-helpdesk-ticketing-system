@@ -1,0 +1,45 @@
+from django.contrib.auth.models import User
+from django.core.mail import send_mail
+from django.urls import reverse
+
+from accounts.models import Profile
+from .models import AuditLog
+
+
+def is_support_or_admin(user):
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    profile = getattr(user, "profile", None)
+    return bool(profile and profile.role in {Profile.ROLE_SUPPORT, Profile.ROLE_ADMIN})
+
+
+def support_users_queryset():
+    return User.objects.filter(profile__role__in=[Profile.ROLE_SUPPORT, Profile.ROLE_ADMIN]).order_by("username")
+
+
+def create_audit_log(actor, ticket, action, field_changed=None, old_value=None, new_value=None):
+    return AuditLog.objects.create(
+        actor=actor if getattr(actor, "is_authenticated", False) else None,
+        ticket=ticket,
+        action=action,
+        field_changed=field_changed,
+        old_value="" if old_value is None else str(old_value),
+        new_value="" if new_value is None else str(new_value),
+    )
+
+
+def send_status_change_email(request, ticket, old_status, new_status):
+    detail_path = reverse("ticket_detail", args=[ticket.pk])
+    absolute_url = request.build_absolute_uri(detail_path)
+    subject = f"Ticket status updated: {ticket.title}"
+    body = (
+        f"Your ticket status has changed.\n\n"
+        f"Ticket: {ticket.title}\n"
+        f"Old status: {old_status}\n"
+        f"New status: {new_status}\n"
+        f"View ticket: {absolute_url}\n"
+    )
+    if ticket.created_by.email:
+        send_mail(subject, body, None, [ticket.created_by.email], fail_silently=True)
