@@ -62,18 +62,7 @@ class TicketUpdateForm(StyledFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["assigned_to"].queryset = support_users_queryset()
         self.fields["assigned_to"].required = False
-        self.fields["resolution_note"].required = False
-        self.fields["resolution_note"].help_text = "Required when setting the ticket status to resolved or closed."
         self.apply_styles()
-
-    def clean(self):
-        cleaned_data = super().clean()
-        status = cleaned_data.get("status")
-        resolution_note = (cleaned_data.get("resolution_note") or "").strip()
-        if status in {Ticket.STATUS_RESOLVED, Ticket.STATUS_CLOSED} and not resolution_note:
-            self.add_error("resolution_note", "Add a resolution note before resolving or closing this ticket.")
-        cleaned_data["resolution_note"] = resolution_note
-        return cleaned_data
 
 
 class CommentForm(StyledFormMixin, forms.ModelForm):

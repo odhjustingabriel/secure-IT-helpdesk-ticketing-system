@@ -120,8 +120,6 @@ class AuditLog(models.Model):
             self.ACTION_STATUS: "changed status",
             self.ACTION_PRIORITY: "changed priority",
             self.ACTION_ASSIGNMENT: "changed assignment",
-            self.ACTION_RESOLUTION_ADDED: "added a resolution note",
-            self.ACTION_RESOLUTION_UPDATED: "updated the resolution note",
         }
         action = action_labels.get(self.action, self.action.replace("_", " "))
         if self.field_changed:

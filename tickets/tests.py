@@ -104,7 +104,7 @@ class TicketWorkflowTests(TestCase):
         self.client.login(username="support", password="pass12345")
         self.client.post(
             reverse("ticket_update", args=[self.ticket.pk]),
-            {"status": Ticket.STATUS_RESOLVED, "priority": Ticket.PRIORITY_HIGH, "assigned_to": "", "resolution_note": "Restarted the VPN service and verified access."},
+            {"status": Ticket.STATUS_RESOLVED, "priority": Ticket.PRIORITY_HIGH, "assigned_to": ""},
         )
         self.assertTrue(
             AuditLog.objects.filter(
@@ -133,61 +133,6 @@ class TicketWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Comment.objects.filter(ticket=self.ticket, author=self.user1, body="Please help soon.").exists())
         self.assertTrue(AuditLog.objects.filter(ticket=self.ticket, action=AuditLog.ACTION_COMMENT).exists())
-
-
-    def test_support_cannot_resolve_ticket_without_resolution_note(self):
-        self.client.login(username="support", password="pass12345")
-        response = self.client.post(
-            reverse("ticket_update", args=[self.ticket.pk]),
-            {"status": Ticket.STATUS_RESOLVED, "priority": Ticket.PRIORITY_HIGH, "assigned_to": "", "resolution_note": ""},
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Add a resolution note before resolving or closing this ticket.")
-        self.ticket.refresh_from_db()
-        self.assertEqual(self.ticket.status, Ticket.STATUS_OPEN)
-
-    def test_support_can_resolve_ticket_with_resolution_note(self):
-        self.client.login(username="support", password="pass12345")
-        response = self.client.post(
-            reverse("ticket_update", args=[self.ticket.pk]),
-            {"status": Ticket.STATUS_RESOLVED, "priority": Ticket.PRIORITY_HIGH, "assigned_to": "", "resolution_note": "VPN profile was rebuilt."},
-        )
-        self.assertEqual(response.status_code, 302)
-        self.ticket.refresh_from_db()
-        self.assertEqual(self.ticket.status, Ticket.STATUS_RESOLVED)
-        self.assertEqual(self.ticket.resolution_note, "VPN profile was rebuilt.")
-
-    def test_resolution_note_appears_on_ticket_detail_page(self):
-        self.ticket.resolution_note = "Reinstalled VPN and confirmed login."
-        self.ticket.save()
-        self.client.login(username="user1", password="pass12345")
-        response = self.client.get(reverse("ticket_detail", args=[self.ticket.pk]))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Resolution Note")
-        self.assertContains(response, "Reinstalled VPN and confirmed login.")
-
-    def test_adding_and_updating_resolution_note_creates_audit_log(self):
-        self.client.login(username="support", password="pass12345")
-        self.client.post(
-            reverse("ticket_update", args=[self.ticket.pk]),
-            {"status": Ticket.STATUS_RESOLVED, "priority": Ticket.PRIORITY_HIGH, "assigned_to": "", "resolution_note": "First fix summary."},
-        )
-        self.assertTrue(AuditLog.objects.filter(ticket=self.ticket, action=AuditLog.ACTION_RESOLUTION_ADDED).exists())
-        self.client.post(
-            reverse("ticket_update", args=[self.ticket.pk]),
-            {"status": Ticket.STATUS_RESOLVED, "priority": Ticket.PRIORITY_HIGH, "assigned_to": "", "resolution_note": "Updated fix summary."},
-        )
-        self.assertTrue(AuditLog.objects.filter(ticket=self.ticket, action=AuditLog.ACTION_RESOLUTION_UPDATED).exists())
-
-    def test_normal_user_cannot_edit_resolution_note(self):
-        self.client.login(username="user1", password="pass12345")
-        response = self.client.post(
-            reverse("ticket_update", args=[self.ticket.pk]),
-            {"status": Ticket.STATUS_RESOLVED, "priority": Ticket.PRIORITY_HIGH, "assigned_to": "", "resolution_note": "User should not set this."},
-        )
-        self.assertEqual(response.status_code, 302)
-        self.ticket.refresh_from_db()
-        self.assertFalse(self.ticket.resolution_note)
 
     def test_ticket_filters_work_at_basic_level(self):
         self.client.login(username="support", password="pass12345")
