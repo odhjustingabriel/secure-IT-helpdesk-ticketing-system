@@ -1,0 +1,2 @@
+# Local SQLite development only. This is enough for the fully Django setup.
+Django>=5.0,<5.3
