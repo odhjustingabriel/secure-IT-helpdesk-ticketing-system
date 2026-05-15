@@ -2,7 +2,7 @@ from .models import Profile
 
 
 def is_support_or_admin(user):
-    if not user.is_authenticated:
+    if not user.is_authenticated or not user.is_active:
         return False
     if user.is_superuser:
         return True
@@ -11,7 +11,7 @@ def is_support_or_admin(user):
 
 
 def is_admin_role(user):
-    if not user.is_authenticated:
+    if not user.is_authenticated or not user.is_active:
         return False
     if user.is_superuser:
         return True

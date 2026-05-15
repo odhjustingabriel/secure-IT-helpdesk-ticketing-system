@@ -27,6 +27,14 @@ class Profile(models.Model):
         return f"{self.user.username} ({self.get_role_display()})"
 
     @property
+    def is_support_role(self):
+        return self.role == self.ROLE_SUPPORT
+
+    @property
+    def is_admin_role(self):
+        return self.role == self.ROLE_ADMIN
+
+    @property
     def is_staff_role(self):
         return self.role in {self.ROLE_SUPPORT, self.ROLE_ADMIN}
 

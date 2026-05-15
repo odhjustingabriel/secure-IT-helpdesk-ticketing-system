@@ -16,12 +16,13 @@
         <a href="{% url 'dashboard' %}">Dashboard</a>
         <a href="{% url 'ticket_list' %}">Tickets</a>
         <a class="nav-button" href="{% url 'ticket_create' %}">New Ticket</a>
-        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+        {% if user.is_superuser or user.profile.is_admin_role %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
       {% endif %}
     </div>
     <div class="nav-account">
       {% if user.is_authenticated %}
         <span>{{ user.username }} · {{ user.profile.get_role_display|default:'User' }}</span>
+        <a href="{% url 'password_change' %}">Change password</a>
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button ghost">Logout</button></form>
       {% else %}
         <a href="{% url 'login' %}">Login</a>
