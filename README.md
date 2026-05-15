@@ -95,6 +95,9 @@ The app runs without this file because safe local defaults are provided in setti
 python manage.py migrate
 ```
 
+> Tip: `python manage.py runserver` also checks for pending migrations and applies them before the local development server starts.
+> If you pulled new code and see a database column error, stop the server and run either `python manage.py migrate` or `python manage.py runserver` again.
+
 ### 5. Seed demo data
 
 ```bash
@@ -159,7 +162,8 @@ If dependency installation fails on a very new Python version, use a stable Pyth
 
 ### `OperationalError: no such column` after pulling updates
 
-This means your local SQLite database schema is behind the Django models. Stop the development server, run migrations, and start it again:
+This means your local SQLite database schema is behind the Django models. Stop the development server, run migrations, and start it again.
+The development server now applies pending migrations automatically, but running `migrate` explicitly is always safe:
 
 ```bash
 python manage.py migrate

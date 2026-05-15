@@ -1,7 +1,9 @@
+from unittest.mock import Mock, patch
+
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.core import mail
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 from django.urls import reverse
 
@@ -324,3 +326,34 @@ class TicketAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "example.png")
         self.assertContains(response, "<img", html=False)
+
+
+class ManagePyAutoMigrationTests(SimpleTestCase):
+    def test_runserver_triggers_local_auto_migration_check(self):
+        import manage
+
+        self.assertTrue(manage.should_auto_migrate(["manage.py", "runserver"]))
+
+    def test_auto_migration_check_can_be_disabled(self):
+        import manage
+
+        with patch.dict("os.environ", {"DISABLE_AUTO_MIGRATE": "true"}):
+            self.assertFalse(manage.should_auto_migrate(["manage.py", "runserver"]))
+
+    def test_pending_migrations_are_applied_before_runserver(self):
+        import manage
+
+        executor = Mock()
+        executor.loader.graph.leaf_nodes.return_value = [("tickets", "0003_cannedresponse_tag_comment_is_internal_and_more")]
+        executor.migration_plan.return_value = [("migration", False)]
+        with (
+            patch("django.setup") as django_setup,
+            patch("django.db.migrations.executor.MigrationExecutor", return_value=executor),
+            patch("django.core.management.call_command") as call_command,
+            patch("builtins.print") as print_message,
+        ):
+            manage.run_pending_migrations_for_local_server()
+
+        django_setup.assert_called_once_with()
+        print_message.assert_called_once_with("Applying pending migrations before starting the development server...")
+        call_command.assert_called_once_with("migrate", interactive=False)
