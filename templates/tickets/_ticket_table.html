@@ -1,17 +1,19 @@
-<div class="table-responsive card border-0 shadow-sm rounded-4">
-<table class="table align-middle mb-0">
-  <thead><tr><th>Ticket</th><th>Status</th><th>Priority</th><th>Category</th><th>Assigned</th><th>Updated</th></tr></thead>
+<div class="panel table-panel">
+<table class="ticket-table">
+  <thead><tr><th>Ticket</th><th>Status</th><th>Priority</th><th>Category</th><th>Tags</th><th>Assigned</th><th>SLA due</th><th>Updated</th></tr></thead>
   <tbody>
   {% for ticket in tickets %}
     <tr>
-      <td><a class="fw-semibold" href="{% url 'ticket_detail' ticket.pk %}">{{ ticket.title }}</a><div class="small text-muted">Created by {{ ticket.created_by.username }}</div></td>
+      <td><a class="ticket-link" href="{% url 'ticket_detail' ticket.pk %}">{{ ticket.title }}</a><small>Created by {{ ticket.created_by.username }} via {{ ticket.get_channel_display }}</small></td>
       <td><span class="badge status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
       <td><span class="badge priority-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span></td>
       <td>{{ ticket.category.name }}</td>
+      <td>{% for tag in ticket.tags.all %}<span class="tag-pill">{{ tag.name }}</span>{% empty %}<span class="muted">None</span>{% endfor %}</td>
       <td>{{ ticket.assigned_to.username|default:'Unassigned' }}</td>
+      <td>{% if ticket.is_overdue %}<span class="badge priority-critical">Overdue</span>{% endif %}<small>{{ ticket.due_at|date:'M d, Y H:i' }}</small></td>
       <td>{{ ticket.updated_at|date:'M d, Y H:i' }}</td>
     </tr>
-  {% empty %}<tr><td colspan="6" class="text-center py-4 text-muted">No tickets found.</td></tr>{% endfor %}
+  {% empty %}<tr><td colspan="8" class="empty">No tickets found.</td></tr>{% endfor %}
   </tbody>
 </table>
 </div>
