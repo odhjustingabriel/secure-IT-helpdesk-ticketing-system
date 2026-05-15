@@ -1,11 +1,10 @@
 .env
-*.sqlite3
 db.sqlite3
-/media/*
-!/media/.gitkeep
-/staticfiles/
+*.sqlite3
 __pycache__/
-*.py[cod]
+*.pyc
 .venv/
+media/
+staticfiles/
 .pytest_cache/
 .coverage
