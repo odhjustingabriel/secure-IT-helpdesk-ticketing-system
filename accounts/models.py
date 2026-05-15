@@ -11,7 +11,7 @@ class Profile(models.Model):
     ROLE_ADMIN = "admin"
     ROLE_CHOICES = [
         (ROLE_USER, "User"),
-        (ROLE_SUPPORT, "Support"),
+        (ROLE_SUPPORT, "Staff"),
         (ROLE_ADMIN, "Admin"),
     ]
 

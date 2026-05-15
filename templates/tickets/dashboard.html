@@ -10,6 +10,7 @@
   {% if is_staff_role %}
     <article class="metric-card danger"><span>Critical</span><strong>{{ critical_tickets }}</strong></article>
     <article class="metric-card warning"><span>Unassigned</span><strong>{{ unassigned_tickets }}</strong></article>
+    <article class="metric-card danger"><span>Overdue SLA</span><strong>{{ overdue_tickets }}</strong></article>
   {% else %}
     <article class="metric-card"><span>In progress</span><strong>{{ in_progress_tickets }}</strong></article>
     <article class="metric-card success"><span>Resolved / closed</span><strong>{{ resolved_tickets }}</strong></article>

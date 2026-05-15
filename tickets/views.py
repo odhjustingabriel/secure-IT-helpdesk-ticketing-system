@@ -3,15 +3,16 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
-from .forms import CommentForm, TicketCreateForm, TicketUpdateForm
-from .models import AuditLog, Category, Ticket
 from accounts.permissions import is_support_or_admin
+from .forms import CommentForm, TicketCreateForm, TicketUpdateForm
+from .models import AuditLog, CannedResponse, Category, Ticket
 from .utils import create_audit_log, send_status_change_email, support_users_queryset
 
 
 def ticket_queryset_for_user(user):
-    qs = Ticket.objects.select_related("category", "created_by", "assigned_to").defer(
+    qs = Ticket.objects.select_related("category", "created_by", "assigned_to").prefetch_related("tags").defer(
         "resolution_note",
         "category__description",
         "category__is_active",
@@ -39,7 +40,7 @@ def apply_ticket_filters(qs, request):
     elif assigned_to and assigned_to.isdigit():
         qs = qs.filter(assigned_to_id=assigned_to)
     if search:
-        qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
+        qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search) | Q(tags__name__icontains=search)).distinct()
     return qs
 
 
@@ -61,6 +62,7 @@ def dashboard(request):
             open_tickets=qs.filter(status=Ticket.STATUS_OPEN).count(),
             critical_tickets=qs.filter(priority=Ticket.PRIORITY_CRITICAL).count(),
             unassigned_tickets=qs.filter(assigned_to__isnull=True).count(),
+            overdue_tickets=qs.filter(due_at__lt=timezone.now()).exclude(status__in=[Ticket.STATUS_RESOLVED, Ticket.STATUS_CLOSED]).count(),
         )
     else:
         context.update(
@@ -106,7 +108,7 @@ def ticket_create(request):
 
 
 def get_permitted_ticket(user, pk):
-    ticket = get_object_or_404(Ticket.objects.select_related("category", "created_by", "assigned_to"), pk=pk)
+    ticket = get_object_or_404(Ticket.objects.select_related("category", "created_by", "assigned_to").prefetch_related("tags"), pk=pk)
     if not is_support_or_admin(user) and ticket.created_by != user:
         raise PermissionDenied("You cannot access another user's ticket.")
     return ticket
@@ -115,27 +117,40 @@ def get_permitted_ticket(user, pk):
 @login_required
 def ticket_detail(request, pk):
     ticket = get_permitted_ticket(request.user, pk)
+    is_staff_role = is_support_or_admin(request.user)
     if request.method == "POST":
-        form = CommentForm(request.POST)
+        form = CommentForm(request.POST, is_staff_role=is_staff_role)
         if form.is_valid():
             comment = form.save(commit=False)
             comment.ticket = ticket
             comment.author = request.user
+            if not is_staff_role:
+                comment.is_internal = False
             comment.save()
-            create_audit_log(request.user, ticket, AuditLog.ACTION_COMMENT)
-            messages.success(request, "Comment added.")
+            if comment.is_internal:
+                create_audit_log(request.user, ticket, AuditLog.ACTION_INTERNAL_NOTE)
+                messages.success(request, "Internal note added.")
+            else:
+                create_audit_log(request.user, ticket, AuditLog.ACTION_COMMENT)
+                if is_staff_role and ticket.first_response_at is None:
+                    ticket.first_response_at = timezone.now()
+                    ticket.save(update_fields=["first_response_at", "updated_at"])
+                    create_audit_log(request.user, ticket, AuditLog.ACTION_FIRST_RESPONSE)
+                messages.success(request, "Comment added.")
             return redirect("ticket_detail", pk=ticket.pk)
     else:
-        form = CommentForm()
+        form = CommentForm(is_staff_role=is_staff_role)
+    comments = ticket.comments.select_related("author") if is_staff_role else ticket.comments.filter(is_internal=False).select_related("author")
     return render(
         request,
         "tickets/ticket_detail.html",
         {
             "ticket": ticket,
-            "comments": ticket.comments.select_related("author"),
+            "comments": comments,
             "comment_form": form,
-            "audit_logs": ticket.audit_logs.select_related("actor") if is_support_or_admin(request.user) else [],
-            "is_staff_role": is_support_or_admin(request.user),
+            "audit_logs": ticket.audit_logs.select_related("actor") if is_staff_role else [],
+            "canned_responses": CannedResponse.objects.filter(is_active=True) if is_staff_role else [],
+            "is_staff_role": is_staff_role,
         },
     )
 
@@ -143,11 +158,12 @@ def ticket_detail(request, pk):
 @login_required
 @user_passes_test(is_support_or_admin)
 def ticket_update(request, pk):
-    ticket = get_object_or_404(Ticket, pk=pk)
+    ticket = get_object_or_404(Ticket.objects.prefetch_related("tags"), pk=pk)
     old_status = ticket.status
     old_priority = ticket.priority
     old_assigned_to = ticket.assigned_to
     old_resolution_note = ticket.resolution_note or ""
+    old_tag_names = sorted(ticket.tags.values_list("name", flat=True))
     if request.method == "POST":
         form = TicketUpdateForm(request.POST, instance=ticket)
         if form.is_valid():
@@ -170,6 +186,9 @@ def ticket_update(request, pk):
             if old_resolution_note != new_resolution_note:
                 action = AuditLog.ACTION_RESOLUTION_UPDATED if old_resolution_note else AuditLog.ACTION_RESOLUTION_ADDED
                 create_audit_log(request.user, updated, action)
+            new_tag_names = sorted(updated.tags.values_list("name", flat=True))
+            if old_tag_names != new_tag_names:
+                create_audit_log(request.user, updated, AuditLog.ACTION_TAGS, "tags", ", ".join(old_tag_names), ", ".join(new_tag_names))
             messages.success(request, "Ticket updated.")
             return redirect("ticket_detail", pk=updated.pk)
     else:

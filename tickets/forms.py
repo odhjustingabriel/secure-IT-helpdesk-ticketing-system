@@ -2,8 +2,8 @@ from pathlib import Path
 
 from django import forms
 
-from .models import Category, Comment, Ticket
-from .utils import support_users_queryset
+from .models import Category, Comment, Tag, Ticket
+from .utils import staff_users_queryset
 
 ALLOWED_ATTACHMENT_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".doc", ".docx"}
 MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024
@@ -18,12 +18,14 @@ class StyledFormMixin:
 class TicketCreateForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Ticket
-        fields = ["title", "description", "category", "priority", "attachment"]
+        fields = ["title", "description", "category", "priority", "channel", "attachment"]
         widgets = {"description": forms.Textarea(attrs={"rows": 6})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["category"].queryset = Category.objects.filter(is_active=True)
+        self.fields["channel"].required = False
+        self.fields["channel"].initial = Ticket.CHANNEL_PORTAL
         self.fields["title"].widget.attrs["maxlength"] = 160
         self.fields["attachment"].help_text = "Optional PDF, PNG, JPG, TXT, DOC, or DOCX file up to 5 MB."
         self.apply_styles()
@@ -40,6 +42,9 @@ class TicketCreateForm(StyledFormMixin, forms.ModelForm):
             raise forms.ValidationError("Description is required.")
         return description
 
+    def clean_channel(self):
+        return self.cleaned_data.get("channel") or Ticket.CHANNEL_PORTAL
+
     def clean_attachment(self):
         attachment = self.cleaned_data.get("attachment")
         if not attachment:
@@ -55,13 +60,21 @@ class TicketCreateForm(StyledFormMixin, forms.ModelForm):
 class TicketUpdateForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Ticket
-        fields = ["status", "priority", "assigned_to", "resolution_note"]
-        widgets = {"resolution_note": forms.Textarea(attrs={"rows": 4, "placeholder": "Summarize what was done to resolve or close this ticket."})}
+        fields = ["status", "priority", "assigned_to", "tags", "due_at", "resolution_note"]
+        widgets = {
+            "resolution_note": forms.Textarea(attrs={"rows": 4, "placeholder": "Summarize what was done to resolve or close this ticket."}),
+            "tags": forms.CheckboxSelectMultiple,
+            "due_at": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["assigned_to"].queryset = support_users_queryset()
+        self.fields["assigned_to"].queryset = staff_users_queryset()
         self.fields["assigned_to"].required = False
+        self.fields["tags"].queryset = Tag.objects.filter(is_active=True)
+        self.fields["tags"].required = False
+        self.fields["due_at"].required = False
+        self.fields["due_at"].help_text = "SLA target. Leave as-is unless the support lead approves an adjustment."
         self.fields["resolution_note"].required = False
         self.fields["resolution_note"].help_text = "Required when setting the ticket status to resolved or closed."
         self.apply_styles()
@@ -79,11 +92,16 @@ class TicketUpdateForm(StyledFormMixin, forms.ModelForm):
 class CommentForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Comment
-        fields = ["body"]
+        fields = ["body", "is_internal"]
         widgets = {"body": forms.Textarea(attrs={"rows": 4, "placeholder": "Add a helpful update..."})}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, is_staff_role=False, **kwargs):
         super().__init__(*args, **kwargs)
+        if not is_staff_role:
+            self.fields.pop("is_internal")
+        else:
+            self.fields["is_internal"].required = False
+            self.fields["is_internal"].help_text = "Internal notes are visible to staff/admin only."
         self.apply_styles()
 
     def clean_body(self):

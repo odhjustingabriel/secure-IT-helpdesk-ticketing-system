@@ -8,10 +8,12 @@ from accounts.permissions import is_support_or_admin
 from .models import AuditLog
 
 
+def staff_users_queryset():
+    return User.objects.filter(profile__role=Profile.ROLE_SUPPORT, is_active=True).order_by("username")
+
+
 def support_users_queryset():
-    return User.objects.filter(
-        Q(is_staff=True) | Q(profile__role__in=[Profile.ROLE_SUPPORT, Profile.ROLE_ADMIN])
-    ).distinct().order_by("username")
+    return staff_users_queryset()
 
 
 def create_audit_log(actor, ticket, action, field_changed=None, old_value=None, new_value=None):

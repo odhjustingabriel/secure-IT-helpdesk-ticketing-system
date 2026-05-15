@@ -5,17 +5,19 @@ A clean, beginner-friendly Django MVP for internal IT support and incident ticke
 ## Features
 
 - Registration, login, and logout using Django authentication.
-- Profile-based roles: `user`, `support`, and `admin`.
+- Profile-based roles: `user`, `staff`, and `admin`, with staff kept out of admin-only Django Admin tools.
 - Normal users can create tickets, view their own tickets, and comment on their own tickets.
-- Support/admin users can view all tickets, filter queues, update status/priority, assign tickets, comment, and view audit logs.
-- Admin users can manage profiles, user roles, active/inactive categories, tickets, comments, and audit logs in Django Admin.
+- Staff/admin users can view all tickets, filter queues, update status/priority, assign tickets to staff, comment, add internal notes, tag tickets, and view audit logs.
+- Admin users can manage profiles, user roles, active/inactive categories, tickets, comments, and audit logs in Django Admin. Superusers can view a masked password hash preview, but plaintext passwords are never available.
 - Ticket statuses: open, in progress, pending, resolved, closed.
 - Priority badges: low, medium, high, critical.
 - Optional ticket attachments with a 5 MB limit and safe extension allowlist.
-- Console email notification when support/admin changes ticket status.
-- Audit logs for ticket creation, comments, status changes, priority changes, assignment changes, and resolution note changes.
+- Console email notification when staff/admin changes ticket status.
+- Audit logs for ticket creation, public comments, internal notes, first responses, status changes, priority changes, assignment changes, tags, and resolution note changes.
+- SLA due dates are generated from ticket priority, with overdue indicators for staff queues.
+- Staff can use active canned responses and private internal notes to speed up common workflows.
 - Admins can deactivate old categories without deleting historical ticket data.
-- Support/admin staff must provide a resolution note when resolving or closing a ticket.
+- Staff/admin users must provide a resolution note when resolving or closing a ticket.
 - Demo data seed command with repeat-safe user/category creation.
 - Real Django `TestCase` coverage for roles, permissions, workflow, filters, audit logs, and email.
 
@@ -176,15 +178,17 @@ python manage.py seed_demo
 - Login is required for ticket pages.
 - Role and ownership checks are enforced inside views, not only in templates.
 - Normal users receive HTTP 403 if they attempt to access another user's ticket.
-- Only support/admin users can reach ticket management views.
+- Only staff/admin users can reach ticket management views; only admin-role users or superusers can enter Django Admin.
 - Django messages provide clear success and error feedback.
 - Attachments are optional, size-limited, and extension-validated.
 - No real secrets are committed; `.env` is ignored.
 - SQLite database and uploaded media are ignored by git.
 - Audit logs record important ticket actions.
 - Admins manage user roles through Django Admin profile records, not through a public user-facing page.
+- Django stores password hashes only; admins cannot view plaintext user passwords and should reset passwords when access recovery is needed.
 - Inactive categories are hidden from new ticket forms while existing tickets keep their historical category.
-- Resolution notes are required before support/admin users can resolve or close tickets.
+- Resolution notes are required before staff/admin users can resolve or close tickets.
+- Internal notes stay hidden from normal users and are audit logged for staff collaboration.
 
 ## Project Scope
 

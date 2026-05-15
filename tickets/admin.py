@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import AuditLog, Category, Comment, Ticket
-from .utils import support_users_queryset
+from .models import AuditLog, CannedResponse, Category, Comment, Tag, Ticket
+from .utils import staff_users_queryset
 
 
 @admin.register(Category)
@@ -25,11 +25,12 @@ class TicketAdmin(admin.ModelAdmin):
         "has_attachment",
         "updated_at",
     )
-    list_filter = ("status", "priority", "category", "assigned_to")
-    search_fields = ("title", "description", "created_by__username", "assigned_to__username")
+    list_filter = ("status", "priority", "category", "assigned_to", "tags")
+    filter_horizontal = ("tags",)
+    search_fields = ("title", "description", "created_by__username", "assigned_to__username", "tags__name")
     readonly_fields = ("created_at", "updated_at", "closed_at", "attachment_link")
     fieldsets = (
-        ("Ticket details", {"fields": ("title", "description", "category", "priority", "status", "resolution_note")}),
+        ("Ticket details", {"fields": ("title", "description", "category", "priority", "status", "channel", "tags", "due_at", "first_response_at", "resolution_note")}),
         ("People", {"fields": ("created_by", "assigned_to")}),
         ("Attachment", {"fields": ("attachment", "attachment_link")}),
         ("Timestamps", {"fields": ("created_at", "updated_at", "closed_at")}),
@@ -37,7 +38,7 @@ class TicketAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "assigned_to":
-            kwargs["queryset"] = support_users_queryset()
+            kwargs["queryset"] = staff_users_queryset()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     @admin.display(boolean=True, description="Attachment")
@@ -63,11 +64,25 @@ class TicketAdmin(admin.ModelAdmin):
         return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', url, name)
 
 
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("name", "color", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("name",)
+
+
+@admin.register(CannedResponse)
+class CannedResponseAdmin(admin.ModelAdmin):
+    list_display = ("title", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("title", "body")
+
+
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ("ticket", "author", "created_at")
+    list_display = ("ticket", "author", "is_internal", "created_at")
     search_fields = ("body", "author__username", "ticket__title")
-    list_filter = ("created_at",)
+    list_filter = ("is_internal", "created_at")
 
 
 @admin.register(AuditLog)

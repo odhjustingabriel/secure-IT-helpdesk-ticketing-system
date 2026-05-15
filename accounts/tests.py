@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
-from django.test import TestCase
 from django.contrib import admin
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
 from .admin import ProfileAdmin
@@ -33,3 +33,26 @@ class RegistrationTests(TestCase):
         self.assertEqual(profile_admin.list_filter, ("role",))
         self.assertEqual(profile_admin.search_fields, ("user__username", "user__email"))
         self.assertEqual(profile_admin.ordering, ("user__username",))
+
+
+    def test_profile_admin_password_hash_preview_is_superuser_only_and_not_plaintext(self):
+        user = User.objects.create_user("hashcheck", email="hashcheck@example.com", password="PlainPassword12345")
+        superuser = User.objects.create_superuser("admin", email="admin@example.com", password="AdminPassword12345")
+        request = RequestFactory().get("/")
+        request.user = superuser
+        profile_admin = ProfileAdmin(Profile, admin.site)
+
+        self.assertIn("password_hash_preview", profile_admin.get_readonly_fields(request, user.profile))
+        rendered = str(profile_admin.password_hash_preview(user.profile))
+        self.assertIn("Show hash for 1 second", rendered)
+        self.assertIn("Django stores password hashes", rendered)
+        self.assertNotIn("PlainPassword12345", rendered)
+
+    def test_profile_admin_password_hash_preview_hidden_for_non_superusers(self):
+        user = User.objects.create_user("hashhidden", email="hashhidden@example.com", password="PlainPassword12345")
+        staff = User.objects.create_user("staff", email="staff@example.com", password="StaffPassword12345", is_staff=True)
+        request = RequestFactory().get("/")
+        request.user = staff
+        profile_admin = ProfileAdmin(Profile, admin.site)
+
+        self.assertNotIn("password_hash_preview", profile_admin.get_readonly_fields(request, user.profile))

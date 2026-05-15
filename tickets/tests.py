@@ -1,11 +1,14 @@
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.core import mail
 from django.test import TestCase
+from django.utils import timezone
 from django.urls import reverse
 
 from accounts.models import Profile
+from .admin import TicketAdmin
 from .utils import support_users_queryset
-from .models import AuditLog, Category, Comment, Ticket
+from .models import AuditLog, CannedResponse, Category, Comment, Tag, Ticket
 from .views import ticket_queryset_for_user
 
 
@@ -194,6 +197,47 @@ class TicketWorkflowTests(TestCase):
         self.ticket.refresh_from_db()
         self.assertFalse(self.ticket.resolution_note)
 
+
+    def test_ticket_due_at_is_set_from_priority_sla(self):
+        self.assertIsNotNone(self.ticket.due_at)
+        self.assertGreater(self.ticket.due_at, timezone.now())
+
+    def test_staff_public_comment_sets_first_response(self):
+        self.client.login(username="support", password="pass12345")
+        response = self.client.post(reverse("ticket_detail", args=[self.ticket.pk]), {"body": "We are checking this now."})
+        self.assertEqual(response.status_code, 302)
+        self.ticket.refresh_from_db()
+        self.assertIsNotNone(self.ticket.first_response_at)
+        self.assertTrue(AuditLog.objects.filter(ticket=self.ticket, action=AuditLog.ACTION_FIRST_RESPONSE).exists())
+
+    def test_internal_note_is_hidden_from_normal_user_and_audited(self):
+        self.client.login(username="support", password="pass12345")
+        self.client.post(reverse("ticket_detail", args=[self.ticket.pk]), {"body": "Escalated to tier 2.", "is_internal": "on"})
+        self.assertTrue(AuditLog.objects.filter(ticket=self.ticket, action=AuditLog.ACTION_INTERNAL_NOTE).exists())
+        self.client.logout()
+        self.client.login(username="user1", password="pass12345")
+        response = self.client.get(reverse("ticket_detail", args=[self.ticket.pk]))
+        self.assertNotContains(response, "Escalated to tier 2.")
+
+    def test_staff_can_tag_ticket_and_create_tag_audit_log(self):
+        tag = Tag.objects.create(name="Escalated")
+        self.client.login(username="support", password="pass12345")
+        response = self.client.post(
+            reverse("ticket_update", args=[self.ticket.pk]),
+            {"status": Ticket.STATUS_OPEN, "priority": Ticket.PRIORITY_HIGH, "assigned_to": "", "tags": [tag.pk], "due_at": self.ticket.due_at.strftime("%Y-%m-%dT%H:%M"), "resolution_note": ""},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.ticket.refresh_from_db()
+        self.assertIn(tag, self.ticket.tags.all())
+        self.assertTrue(AuditLog.objects.filter(ticket=self.ticket, action=AuditLog.ACTION_TAGS).exists())
+
+    def test_staff_sees_canned_responses_on_ticket_detail(self):
+        CannedResponse.objects.create(title="Password reset", body="Please reset your password from the self-service portal.")
+        self.client.login(username="support", password="pass12345")
+        response = self.client.get(reverse("ticket_detail", args=[self.ticket.pk]))
+        self.assertContains(response, "Canned responses")
+        self.assertContains(response, "Password reset")
+
     def test_ticket_filters_work_at_basic_level(self):
         self.client.login(username="support", password="pass12345")
         response = self.client.get(reverse("ticket_list"), {"status": Ticket.STATUS_PENDING, "priority": Ticket.PRIORITY_LOW})
@@ -206,7 +250,9 @@ class TicketAdminTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name="Security", description="Security issues")
         self.creator = User.objects.create_user("creator", email="creator@example.com", password="pass12345")
-        self.staff_user = User.objects.create_user("staffuser", email="staff@example.com", password="pass12345", is_staff=True)
+        self.staff_user = User.objects.create_user("staffuser", email="staff@example.com", password="pass12345")
+        self.staff_user.profile.role = Profile.ROLE_SUPPORT
+        self.staff_user.profile.save()
         self.normal_user = User.objects.create_user("normal", email="normal@example.com", password="pass12345")
         self.admin = User.objects.create_superuser("admin", email="admin@example.com", password="adminpass12345")
         self.ticket = Ticket.objects.create(
@@ -221,8 +267,25 @@ class TicketAdminTests(TestCase):
     def test_admin_assignment_queryset_includes_staff_not_normal_users(self):
         assignable_users = support_users_queryset()
         self.assertIn(self.staff_user, assignable_users)
-        self.assertIn(self.admin, assignable_users)
+        self.assertNotIn(self.admin, assignable_users)
         self.assertNotIn(self.normal_user, assignable_users)
+
+
+    def test_admin_can_access_admin_panel_but_staff_cannot(self):
+        self.client.login(username="admin", password="adminpass12345")
+        self.assertEqual(self.client.get(reverse("admin:index")).status_code, 200)
+        self.client.logout()
+        self.client.login(username="staffuser", password="pass12345")
+        response = self.client.get(reverse("admin:index"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_admin_ticket_form_assigns_only_staff_role_users(self):
+        ticket_admin = TicketAdmin(Ticket, admin.site)
+        field = Ticket._meta.get_field("assigned_to")
+        form_field = ticket_admin.formfield_for_foreignkey(field, None)
+        self.assertIn(self.staff_user, form_field.queryset)
+        self.assertNotIn(self.normal_user, form_field.queryset)
+        self.assertNotIn(self.admin, form_field.queryset)
 
     def test_admin_ticket_change_page_shows_attachment_link_and_image_preview(self):
         self.client.login(username="admin", password="adminpass12345")

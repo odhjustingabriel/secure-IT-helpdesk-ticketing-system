@@ -4,7 +4,8 @@
   <section>
     <article class="panel ticket-hero">
       <div class="split"><div><p class="eyebrow">Ticket #{{ ticket.pk }}</p><h1>{{ ticket.title }}</h1><p class="muted">Created {{ ticket.created_at|date:'M d, Y H:i' }} by {{ ticket.created_by.username }}</p></div>{% if is_staff_role %}<a class="button outline" href="{% url 'ticket_update' ticket.pk %}">Manage ticket</a>{% endif %}</div>
-      <div class="badge-row"><span class="badge status-{{ ticket.status }}">{{ ticket.get_status_display }}</span><span class="badge priority-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span></div>
+      <div class="badge-row"><span class="badge status-{{ ticket.status }}">{{ ticket.get_status_display }}</span><span class="badge priority-{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>{% if ticket.is_overdue %}<span class="badge priority-critical">Overdue SLA</span>{% endif %}</div>
+      <div class="tag-row">{% for tag in ticket.tags.all %}<span class="tag-pill">{{ tag.name }}</span>{% empty %}<span class="muted">No tags yet</span>{% endfor %}</div>
       <div class="description">{{ ticket.description|linebreaksbr }}</div>
       {% if ticket.attachment %}<a class="button outline" href="{{ ticket.attachment.url }}">View attachment</a>{% endif %}
     </article>
@@ -16,13 +17,13 @@
     {% endif %}
     <article class="panel comments-panel">
       <h2>Comments</h2>
-      {% for comment in comments %}<div class="comment"><strong>{{ comment.author.username }}</strong><small>{{ comment.created_at|date:'M d, Y H:i' }}</small><p>{{ comment.body|linebreaksbr }}</p></div>{% empty %}<p class="muted">No comments yet.</p>{% endfor %}
-      <form method="post" class="comment-form">{% csrf_token %}{{ comment_form.body }}{% for error in comment_form.body.errors %}<div class="field-error">{{ error }}</div>{% endfor %}<button class="button primary">Add Comment</button></form>
+      {% for comment in comments %}<div class="comment {% if comment.is_internal %}internal-note{% endif %}"><strong>{{ comment.author.username }}</strong>{% if comment.is_internal %}<span class="badge internal-badge">Internal</span>{% endif %}<small>{{ comment.created_at|date:'M d, Y H:i' }}</small><p>{{ comment.body|linebreaksbr }}</p></div>{% empty %}<p class="muted">No comments yet.</p>{% endfor %}
+      <form method="post" class="comment-form">{% csrf_token %}{{ comment_form.body }}{% if comment_form.is_internal %}<label class="checkbox-field">{{ comment_form.is_internal }} Internal note</label>{% if comment_form.is_internal.help_text %}<small class="muted">{{ comment_form.is_internal.help_text }}</small>{% endif %}{% endif %}{% for error in comment_form.body.errors %}<div class="field-error">{{ error }}</div>{% endfor %}<button class="button primary">Add Comment</button></form>
     </article>
   </section>
   <aside>
-    <article class="panel info-panel"><h2>Ticket info</h2><dl><dt>Category</dt><dd>{{ ticket.category.name }}</dd><dt>Creator</dt><dd>{{ ticket.created_by.username }}</dd><dt>Assigned staff</dt><dd>{{ ticket.assigned_to.username|default:'Unassigned' }}</dd><dt>Updated</dt><dd>{{ ticket.updated_at|date:'M d, Y H:i' }}</dd><dt>Closed</dt><dd>{{ ticket.closed_at|date:'M d, Y H:i'|default:'Not closed' }}</dd></dl></article>
-    {% if is_staff_role %}<article class="panel audit-panel"><h2>Audit log</h2>{% for log in audit_logs %}<div class="audit-item"><strong>{{ log.readable_message }}</strong><small>{{ log.timestamp|date:'M d, Y H:i' }}</small></div>{% empty %}<p class="muted">No audit records.</p>{% endfor %}</article>{% endif %}
+    <article class="panel info-panel"><h2>Ticket info</h2><dl><dt>Category</dt><dd>{{ ticket.category.name }}</dd><dt>Channel</dt><dd>{{ ticket.get_channel_display }}</dd><dt>Creator</dt><dd>{{ ticket.created_by.username }}</dd><dt>Assigned staff</dt><dd>{{ ticket.assigned_to.username|default:'Unassigned' }}</dd><dt>SLA due</dt><dd>{{ ticket.due_at|date:'M d, Y H:i' }}</dd><dt>First response</dt><dd>{{ ticket.first_response_at|date:'M d, Y H:i'|default:'Not yet' }}</dd><dt>Updated</dt><dd>{{ ticket.updated_at|date:'M d, Y H:i' }}</dd><dt>Closed</dt><dd>{{ ticket.closed_at|date:'M d, Y H:i'|default:'Not closed' }}</dd></dl></article>
+    {% if is_staff_role %}<article class="panel canned-panel"><h2>Canned responses</h2>{% for response in canned_responses %}<div class="audit-item"><strong>{{ response.title }}</strong><p>{{ response.body }}</p></div>{% empty %}<p class="muted">No canned responses configured.</p>{% endfor %}</article><article class="panel audit-panel"><h2>Audit log</h2>{% for log in audit_logs %}<div class="audit-item"><strong>{{ log.readable_message }}</strong><small>{{ log.timestamp|date:'M d, Y H:i' }}</small></div>{% empty %}<p class="muted">No audit records.</p>{% endfor %}</article>{% endif %}
   </aside>
 </div>
 {% endblock %}
