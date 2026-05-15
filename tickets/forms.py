@@ -88,6 +88,17 @@ class TicketUpdateForm(StyledFormMixin, forms.ModelForm):
         cleaned_data["resolution_note"] = resolution_note
         return cleaned_data
 
+    def save(self, commit=True):
+        ticket = super().save(commit=False)
+        priority_changed = "priority" in self.changed_data
+        due_at_manually_changed = "due_at" in self.changed_data
+        if priority_changed and not due_at_manually_changed:
+            ticket.due_at = ticket.calculate_due_at()
+        if commit:
+            ticket.save()
+            self.save_m2m()
+        return ticket
+
 
 class CommentForm(StyledFormMixin, forms.ModelForm):
     class Meta:

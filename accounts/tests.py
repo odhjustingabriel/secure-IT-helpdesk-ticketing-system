@@ -44,8 +44,11 @@ class RegistrationTests(TestCase):
 
         self.assertIn("password_hash_preview", profile_admin.get_readonly_fields(request, user.profile))
         rendered = str(profile_admin.password_hash_preview(user.profile))
-        self.assertIn("Show hash for 1 second", rendered)
+        self.assertIn("Password hash metadata", profile_admin.password_hash_preview.short_description)
         self.assertIn("Django stores password hashes", rendered)
+        self.assertIn("pbkdf2_sha256 hash stored", rendered)
+        self.assertNotIn(user.password, rendered)
+        self.assertNotIn("data-secret", rendered)
         self.assertNotIn("PlainPassword12345", rendered)
 
     def test_profile_admin_password_hash_preview_hidden_for_non_superusers(self):

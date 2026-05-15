@@ -18,31 +18,18 @@ class ProfileAdmin(admin.ModelAdmin):
             readonly_fields.append("password_hash_preview")
         return tuple(readonly_fields)
 
-    @admin.display(description="Password hash (not plaintext)")
+    @admin.display(description="Password hash metadata")
     def password_hash_preview(self, obj):
         if not obj or not obj.user_id:
             return "Save this profile before viewing password metadata."
 
-        element_id = f"password-hash-{obj.pk}"
-        masked_value = "*" * 24
+        algorithm = obj.user.password.split("$", 1)[0] if obj.user.password else "unusable"
         return format_html(
             """
             <div class="readonly">
-              <code id="{element_id}" data-secret="{password_hash}">{masked_value}</code>
-              <button type="button" class="button" onclick="
-                const code = document.getElementById('{element_id}');
-                const button = this;
-                code.textContent = code.dataset.secret;
-                button.disabled = true;
-                setTimeout(function() {{
-                  code.textContent = '{masked_value}';
-                  button.disabled = false;
-                }}, 1000);
-              ">Show hash for 1 second</button>
-              <p class="help">Django stores password hashes, not readable plaintext passwords. Use the user's password change form to reset a password.</p>
+              <code>{algorithm} hash stored</code>
+              <p class="help">Django stores password hashes, not readable plaintext passwords. The full hash is intentionally not exposed in this admin page; use the user's password change form to reset access.</p>
             </div>
             """,
-            element_id=element_id,
-            password_hash=obj.user.password,
-            masked_value=masked_value,
+            algorithm=algorithm,
         )

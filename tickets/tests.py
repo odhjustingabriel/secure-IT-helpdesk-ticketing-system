@@ -202,6 +202,37 @@ class TicketWorkflowTests(TestCase):
         self.assertIsNotNone(self.ticket.due_at)
         self.assertGreater(self.ticket.due_at, timezone.now())
 
+    def test_ticket_due_at_is_recalculated_when_priority_changes_without_manual_due_date(self):
+        original_due_at = self.ticket.due_at
+        self.client.login(username="support", password="pass12345")
+        response = self.client.post(
+            reverse("ticket_update", args=[self.ticket.pk]),
+            {"status": Ticket.STATUS_OPEN, "priority": Ticket.PRIORITY_CRITICAL, "assigned_to": "", "resolution_note": ""},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.priority, Ticket.PRIORITY_CRITICAL)
+        self.assertLess(self.ticket.due_at, original_due_at)
+        self.assertGreater(self.ticket.due_at, timezone.now())
+
+    def test_manual_due_at_is_preserved_when_priority_changes(self):
+        manual_due_at = timezone.now() + timezone.timedelta(days=10)
+        self.client.login(username="support", password="pass12345")
+        response = self.client.post(
+            reverse("ticket_update", args=[self.ticket.pk]),
+            {
+                "status": Ticket.STATUS_OPEN,
+                "priority": Ticket.PRIORITY_CRITICAL,
+                "assigned_to": "",
+                "due_at": manual_due_at.strftime("%Y-%m-%dT%H:%M"),
+                "resolution_note": "",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.priority, Ticket.PRIORITY_CRITICAL)
+        self.assertEqual(self.ticket.due_at.strftime("%Y-%m-%dT%H:%M"), manual_due_at.strftime("%Y-%m-%dT%H:%M"))
+
     def test_staff_public_comment_sets_first_response(self):
         self.client.login(username="support", password="pass12345")
         response = self.client.post(reverse("ticket_detail", args=[self.ticket.pk]), {"body": "We are checking this now."})

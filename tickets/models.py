@@ -117,10 +117,13 @@ class Ticket(models.Model):
     def __str__(self):
         return f"#{self.pk} {self.title}"
 
+    def calculate_due_at(self):
+        hours = self.SLA_HOURS_BY_PRIORITY.get(self.priority, self.SLA_HOURS_BY_PRIORITY[self.PRIORITY_MEDIUM])
+        return timezone.now() + timedelta(hours=hours)
+
     def save(self, *args, **kwargs):
         if self.due_at is None:
-            hours = self.SLA_HOURS_BY_PRIORITY.get(self.priority, 24)
-            self.due_at = timezone.now() + timedelta(hours=hours)
+            self.due_at = self.calculate_due_at()
         if self.status == self.STATUS_CLOSED and self.closed_at is None:
             self.closed_at = timezone.now()
         if self.status != self.STATUS_CLOSED:
