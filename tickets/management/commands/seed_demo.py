@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
@@ -11,10 +13,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         users = {
-            "admin": ("admin12345", Profile.ROLE_ADMIN, True, True, "admin@example.com"),
-            "support": ("support12345", Profile.ROLE_SUPPORT, False, False, "support@example.com"),
-            "user1": ("user12345", Profile.ROLE_USER, False, False, "user1@example.com"),
-            "user2": ("user12345", Profile.ROLE_USER, False, False, "user2@example.com"),
+            "admin": (os.getenv("DEMO_ADMIN_PASSWORD", "admin12345"), Profile.ROLE_ADMIN, True, True, "admin@example.com"),
+            "support": (os.getenv("DEMO_SUPPORT_PASSWORD", "support12345"), Profile.ROLE_SUPPORT, False, False, "support@example.com"),
+            "user1": (os.getenv("DEMO_USER_PASSWORD", "user12345"), Profile.ROLE_USER, False, False, "user1@example.com"),
+            "user2": (os.getenv("DEMO_USER_PASSWORD", "user12345"), Profile.ROLE_USER, False, False, "user2@example.com"),
         }
         created_users = {}
         for username, (password, role, is_staff, is_superuser, email) in users.items():
