@@ -35,6 +35,6 @@
   {% for message in messages %}<div class="message {{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}
   {% block content %}{% endblock %}
 </main>
-<footer class="footer">Secure IT Helpdesk Ticketing System · Portfolio MVP</footer>
+<footer class="footer">© {% now "Y" %} Secure IT Helpdesk Ticketing System · Internal Support Portal</footer>
 </body>
 </html>

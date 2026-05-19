@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 from django.urls import reverse
@@ -80,6 +81,22 @@ class TicketWorkflowTests(TestCase):
         ticket = Ticket.objects.get(title="Email down")
         self.assertEqual(ticket.created_by, self.user1)
         self.assertTrue(AuditLog.objects.filter(ticket=ticket, action=AuditLog.ACTION_CREATED).exists())
+
+    def test_attachment_with_executable_signature_is_rejected(self):
+        self.client.login(username="user1", password="pass12345")
+        bad_file = SimpleUploadedFile("evidence.pdf", b"MZfakeexe", content_type="application/pdf")
+        response = self.client.post(
+            reverse("ticket_create"),
+            {
+                "title": "Bad attachment",
+                "description": "Testing upload validation",
+                "category": self.category.pk,
+                "priority": Ticket.PRIORITY_MEDIUM,
+                "attachment": bad_file,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Executable file signatures are not allowed.")
 
     def test_user_can_view_own_ticket(self):
         self.client.login(username="user1", password="pass12345")
