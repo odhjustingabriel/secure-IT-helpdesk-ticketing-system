@@ -7,6 +7,7 @@ from .utils import staff_users_queryset
 
 ALLOWED_ATTACHMENT_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".doc", ".docx"}
 MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024
+MAX_TEXT_FIELD_LENGTH = 5000
 
 
 class StyledFormMixin:
@@ -40,6 +41,8 @@ class TicketCreateForm(StyledFormMixin, forms.ModelForm):
         description = self.cleaned_data["description"].strip()
         if not description:
             raise forms.ValidationError("Description is required.")
+        if len(description) > MAX_TEXT_FIELD_LENGTH:
+            raise forms.ValidationError("Description is too long.")
         return description
 
     def clean_channel(self):
@@ -119,4 +122,6 @@ class CommentForm(StyledFormMixin, forms.ModelForm):
         body = self.cleaned_data["body"].strip()
         if not body:
             raise forms.ValidationError("Comment body is required.")
+        if len(body) > MAX_TEXT_FIELD_LENGTH:
+            raise forms.ValidationError("Comment is too long.")
         return body

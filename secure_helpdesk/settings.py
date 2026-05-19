@@ -9,6 +9,8 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-dev-key-change-me")
 DEBUG = os.getenv("DEBUG", "True").lower() in {"1", "true", "yes", "on"}
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",") if host.strip()]
+if not DEBUG and SECRET_KEY == "unsafe-dev-key-change-me":
+    raise ValueError("SECRET_KEY must be set in environment when DEBUG is False.")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -23,6 +25,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "secure_helpdesk.security.RequestSafetyMiddleware",
+    "secure_helpdesk.security.RateLimitMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -82,7 +86,18 @@ LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "Secure IT Helpdesk <helpdesk@example.com>"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Secure IT Helpdesk <helpdesk@example.com>")
+
+MAX_REQUEST_BODY_BYTES = int(os.getenv("MAX_REQUEST_BODY_BYTES", 1048576))
+MAX_QUERY_STRING_LENGTH = int(os.getenv("MAX_QUERY_STRING_LENGTH", 2048))
+RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", 900))
+AUTH_RATE_LIMIT_ATTEMPTS = int(os.getenv("AUTH_RATE_LIMIT_ATTEMPTS", 5))
+DEFAULT_RATE_LIMIT_ATTEMPTS = int(os.getenv("DEFAULT_RATE_LIMIT_ATTEMPTS", 120))
+AUTH_RATE_LIMIT_PATHS = [
+    r"^/accounts/login/?$",
+    r"^/accounts/register/?$",
+    r"^/accounts/password-change/?$",
+]
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
