@@ -134,3 +134,26 @@ class PasswordChangeTests(TestCase):
         self.assertContains(response, "Your old password was entered incorrectly")
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("OldPass12345"))
+
+
+class SecurityMiddlewareTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("ratelimituser", email="rate@example.com", password="StrongPass12345")
+
+    def test_login_rate_limit_blocks_after_five_attempts_in_fifteen_minutes(self):
+        for _ in range(5):
+            response = self.client.post(reverse("login"), {"username": "ratelimituser", "password": "badpass"})
+            self.assertIn(response.status_code, {200, 302})
+        blocked = self.client.post(reverse("login"), {"username": "ratelimituser", "password": "badpass"})
+        self.assertEqual(blocked.status_code, 429)
+
+    def test_oversized_payload_is_rejected(self):
+        self.client.login(username="ratelimituser", password="StrongPass12345")
+        payload = {"title": "x", "description": "x" * 6001}
+        response = self.client.post(reverse("ticket_create"), payload)
+        self.assertContains(response, "Description is too long.", status_code=200)
+
+    def test_oversized_query_string_is_rejected(self):
+        self.client.login(username="ratelimituser", password="StrongPass12345")
+        response = self.client.get(f"{reverse('ticket_list')}?q={'x' * 3000}")
+        self.assertEqual(response.status_code, 414)
