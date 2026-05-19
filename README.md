@@ -1,6 +1,6 @@
 # Secure IT Helpdesk Ticketing System
 
-A clean, beginner-friendly Django MVP for internal IT support and incident ticketing. The project uses Django, Django Templates, SQLite, console email, and custom CSS only, making it easy to run locally and strong as a portfolio project.
+A clean, beginner-friendly Django app for internal IT support and incident ticketing. The project uses Django, Django Templates, SQLite, console email, and custom CSS only, making it easy to run locally.
 
 ## Features
 
@@ -191,13 +191,16 @@ python manage.py seed_demo
 ## Security Features
 
 - CSRF protection is enabled through Django middleware and template tokens.
+- Baseline request anomaly filtering blocks common injection/XSS/path-traversal signatures before view processing.
 - Login is required for ticket pages.
 - Role and ownership checks are enforced inside views, not only in templates.
 - Normal users receive HTTP 403 if they attempt to access another user's ticket.
 - Only support/admin users can reach ticket management views; only admin-role users or superusers can enter Django Admin.
 - Django messages provide clear success and error feedback.
 - Attachments are optional, size-limited, and extension-validated.
+- Attachments are also constrained by content type, and executable (`MZ`) signatures are rejected.
 - No real secrets are committed; `.env` is ignored.
+- Rate limiting applies globally and also per-account on auth routes; production deployments can use a shared cache backend (for example Redis) for multi-instance consistency.
 - SQLite database and uploaded media are ignored by git.
 - Audit logs record important ticket actions.
 - Admins manage user roles through Django Admin profile records, not through a public user-facing page. Authenticated users can change their own passwords from the navigation bar.
@@ -206,9 +209,22 @@ python manage.py seed_demo
 - Resolution notes are required before staff/admin users can resolve or close tickets.
 - Internal notes stay hidden from normal users and are audit logged for staff collaboration.
 
+## OWASP Top 10 Mitigation Snapshot
+
+- **A01 Broken Access Control:** Enforced object-level ownership checks and role-based guards in views/admin.
+- **A02 Cryptographic Failures:** Secret key required in non-debug mode; secrets are environment-driven.
+- **A03 Injection:** ORM usage plus baseline anomaly filtering for obvious injection patterns.
+- **A04 Insecure Design:** Explicit auth throttling, request-size limits, and auditable workflow controls.
+- **A05 Security Misconfiguration:** Secure headers/cookie options and environment-configurable security settings.
+- **A06 Vulnerable Components:** Dependency management via `requirements.txt` (run periodic dependency scans).
+- **A07 Identification and Authentication Failures:** Auth route throttling per-IP and per-username.
+- **A08 Software and Data Integrity Failures:** Controlled seed/demo behavior via environment and least default exposure.
+- **A09 Security Logging and Monitoring Failures:** Audit logs for key ticket actions and workflow state changes.
+- **A10 SSRF:** No outbound URL-fetch feature exists in app workflows; avoid adding unsafely proxied fetch features.
+
 ## Project Scope
 
-This is intentionally an MVP, not an enterprise helpdesk suite. It does not use React, Docker, PostgreSQL, Django REST Framework, Celery, Redis, real-time chat, or advanced analytics. The code focuses on Django fundamentals, readable forms/views, role-based access control, and a complete ticket workflow.
+This project is intentionally focused, not an enterprise helpdesk suite. It does not use React, Docker, PostgreSQL, Django REST Framework, Celery, Redis, real-time chat, or advanced analytics. The code focuses on Django fundamentals, readable forms/views, role-based access control, and a complete ticket workflow.
 
 ## Future Improvements
 
@@ -220,6 +236,23 @@ This is intentionally an MVP, not an enterprise helpdesk suite. It does not use 
 - Team queues and SLA tracking.
 - Virus scanning for uploaded attachments.
 
-## Portfolio Summary
+## Summary
 
-Secure IT Helpdesk Ticketing System demonstrates a complete Django MVP with authentication, profile roles, secure ticket ownership rules, support staff workflow, audit logging, email notifications, file validation, custom template styling, seed data, and meaningful automated tests.
+Secure IT Helpdesk Ticketing System includes authentication, profile roles, secure ticket ownership rules, support staff workflow, audit logging, email notifications, file validation, custom template styling, seed data, and meaningful automated tests.
+
+## What I Learned (Cybersecurity Focus)
+
+- **Defense in depth matters:** Combining authentication controls, authorization checks, input validation, rate limiting, and security headers provides stronger protection than relying on any single control.
+- **Secure defaults reduce risk:** Keeping sensitive configuration in environment variables and validating production-critical settings (like `SECRET_KEY`) helps prevent avoidable misconfiguration issues.
+- **Visibility is part of security:** Audit logging of key ticket and workflow actions improves traceability and supports incident response, troubleshooting, and accountability.
+- **Abuse resistance needs layered controls:** Per-IP and per-account throttling significantly improves resilience against brute-force patterns, especially when backed by shared cache infrastructure in multi-instance deployments.
+- **File uploads are a common attack surface:** Extension checks alone are not enough; combining size limits, type checks, and signature screening is a practical baseline hardening step.
+
+## What I Can Improve On (Cybersecurity Focus)
+
+- **Deploy Redis-backed throttling in production:** Move from local memory cache to a centralized cache for consistent rate limiting and lockout behavior across all app instances.
+- **Add malware scanning for attachments:** Integrate antivirus/content inspection (for example, ClamAV pipeline) before making uploaded files available.
+- **Strengthen authentication with step-up controls:** Add MFA and/or CAPTCHA after repeated failed login attempts to further reduce account takeover risk.
+- **Expand monitoring and detection:** Add alerting for suspicious patterns (rate-limit spikes, repeated 403/429s, unusual admin actions) and document response playbooks.
+- **Harden browser security policy:** Introduce and tune a strict Content Security Policy (CSP), permissions policy, and stronger transport settings for production.
+- **Automate dependency and secret scanning in CI:** Continuously check for vulnerable packages, leaked credentials, and insecure configuration drift.
