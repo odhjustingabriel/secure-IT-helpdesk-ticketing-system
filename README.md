@@ -239,3 +239,20 @@ This project is intentionally focused, not an enterprise helpdesk suite. It does
 ## Summary
 
 Secure IT Helpdesk Ticketing System includes authentication, profile roles, secure ticket ownership rules, support staff workflow, audit logging, email notifications, file validation, custom template styling, seed data, and meaningful automated tests.
+
+## What I Learned
+
+- **Defense in depth matters:** Combining authentication controls, authorization checks, input validation, rate limiting, and security headers provides stronger protection than relying on any single control.
+- **Secure defaults reduce risk:** Keeping sensitive configuration in environment variables and validating production-critical settings (like `SECRET_KEY`) helps prevent avoidable misconfiguration issues.
+- **Visibility is part of security:** Audit logging of key ticket and workflow actions improves traceability and supports incident response, troubleshooting, and accountability.
+- **Abuse resistance needs layered controls:** Per-IP and per-account throttling significantly improves resilience against brute-force patterns, especially when backed by shared cache infrastructure in multi-instance deployments.
+- **File uploads are a common attack surface:** Extension checks alone are not enough; combining size limits, type checks, and signature screening is a practical baseline hardening step.
+
+## What I Can Improve On
+
+- **Deploy Redis-backed throttling in production:** Move from local memory cache to a centralized cache for consistent rate limiting and lockout behavior across all app instances.
+- **Add malware scanning for attachments:** Integrate antivirus/content inspection (for example, ClamAV pipeline) before making uploaded files available.
+- **Strengthen authentication with step-up controls:** Add MFA and/or CAPTCHA after repeated failed login attempts to further reduce account takeover risk.
+- **Expand monitoring and detection:** Add alerting for suspicious patterns (rate-limit spikes, repeated 403/429s, unusual admin actions) and document response playbooks.
+- **Harden browser security policy:** Introduce and tune a strict Content Security Policy (CSP), permissions policy, and stronger transport settings for production.
+- **Automate dependency and secret scanning in CI:** Continuously check for vulnerable packages, leaked credentials, and insecure configuration drift.
