@@ -191,13 +191,16 @@ python manage.py seed_demo
 ## Security Features
 
 - CSRF protection is enabled through Django middleware and template tokens.
+- Baseline request anomaly filtering blocks common injection/XSS/path-traversal signatures before view processing.
 - Login is required for ticket pages.
 - Role and ownership checks are enforced inside views, not only in templates.
 - Normal users receive HTTP 403 if they attempt to access another user's ticket.
 - Only support/admin users can reach ticket management views; only admin-role users or superusers can enter Django Admin.
 - Django messages provide clear success and error feedback.
 - Attachments are optional, size-limited, and extension-validated.
+- Attachments are also constrained by content type, and executable (`MZ`) signatures are rejected.
 - No real secrets are committed; `.env` is ignored.
+- Rate limiting applies globally and also per-account on auth routes; production deployments can use a shared cache backend (for example Redis) for multi-instance consistency.
 - SQLite database and uploaded media are ignored by git.
 - Audit logs record important ticket actions.
 - Admins manage user roles through Django Admin profile records, not through a public user-facing page. Authenticated users can change their own passwords from the navigation bar.
@@ -205,6 +208,19 @@ python manage.py seed_demo
 - Inactive categories are hidden from new ticket forms while existing tickets keep their historical category.
 - Resolution notes are required before staff/admin users can resolve or close tickets.
 - Internal notes stay hidden from normal users and are audit logged for staff collaboration.
+
+## OWASP Top 10 Mitigation Snapshot
+
+- **A01 Broken Access Control:** Enforced object-level ownership checks and role-based guards in views/admin.
+- **A02 Cryptographic Failures:** Secret key required in non-debug mode; secrets are environment-driven.
+- **A03 Injection:** ORM usage plus baseline anomaly filtering for obvious injection patterns.
+- **A04 Insecure Design:** Explicit auth throttling, request-size limits, and auditable workflow controls.
+- **A05 Security Misconfiguration:** Secure headers/cookie options and environment-configurable security settings.
+- **A06 Vulnerable Components:** Dependency management via `requirements.txt` (run periodic dependency scans).
+- **A07 Identification and Authentication Failures:** Auth route throttling per-IP and per-username.
+- **A08 Software and Data Integrity Failures:** Controlled seed/demo behavior via environment and least default exposure.
+- **A09 Security Logging and Monitoring Failures:** Audit logs for key ticket actions and workflow state changes.
+- **A10 SSRF:** No outbound URL-fetch feature exists in app workflows; avoid adding unsafely proxied fetch features.
 
 ## Project Scope
 

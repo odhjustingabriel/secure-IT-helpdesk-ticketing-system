@@ -8,6 +8,12 @@ from .utils import staff_users_queryset
 ALLOWED_ATTACHMENT_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".doc", ".docx"}
 MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024
 MAX_TEXT_FIELD_LENGTH = 5000
+ALLOWED_MIME_PREFIXES = ("image/", "text/")
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
 
 
 class StyledFormMixin:
@@ -57,6 +63,13 @@ class TicketCreateForm(StyledFormMixin, forms.ModelForm):
         extension = Path(attachment.name).suffix.lower()
         if extension not in ALLOWED_ATTACHMENT_EXTENSIONS:
             raise forms.ValidationError("Unsupported file type. Upload PDF, PNG, JPG, JPEG, TXT, DOC, or DOCX only.")
+        content_type = getattr(attachment, "content_type", "") or ""
+        if not (content_type.startswith(ALLOWED_MIME_PREFIXES) or content_type in ALLOWED_MIME_TYPES):
+            raise forms.ValidationError("Attachment content type is not allowed.")
+        header = attachment.read(8)
+        attachment.seek(0)
+        if header.startswith(b"MZ"):
+            raise forms.ValidationError("Executable file signatures are not allowed.")
         return attachment
 
 

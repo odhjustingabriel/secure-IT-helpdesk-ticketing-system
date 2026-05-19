@@ -5,6 +5,29 @@ from django.core.cache import cache
 from django.http import HttpResponse, JsonResponse
 
 
+class BasicWAFMiddleware:
+    BLOCK_PATTERNS = [
+        re.compile(r"(?i)(\bunion\b\s+\bselect\b)"),
+        re.compile(r"(?i)(<\s*script\b)"),
+        re.compile(r"(?i)(\.\./)"),
+    ]
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        payload = " ".join(
+            [
+                request.META.get("QUERY_STRING", ""),
+                request.META.get("HTTP_USER_AGENT", ""),
+                request.POST.urlencode() if request.method == "POST" else "",
+            ]
+        )
+        if any(pattern.search(payload) for pattern in self.BLOCK_PATTERNS):
+            return HttpResponse("Request blocked by security policy.", status=400)
+        return self.get_response(request)
+
+
 class RequestSafetyMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -33,13 +56,25 @@ class RateLimitMiddleware:
         path = request.path
         limit = self.auth_limit if self._is_auth_path(path) else self.default_limit
         cache_key = f"ratelimit:{identifier}:{path}"
-        count = cache.get(cache_key, 0)
-        if count >= limit:
+        if self._is_limited(cache_key, limit):
             retry_after = self.window
             response_data = {"detail": "Too many requests. Please try again later.", "retry_after_seconds": retry_after}
             return JsonResponse(response_data, status=429)
-        cache.set(cache_key, count + 1, timeout=self.window)
+        if self._is_auth_path(path):
+            username = (request.POST.get("username") or "").strip().lower() if request.method == "POST" else ""
+            if username:
+                user_key = f"ratelimit:auth-user:{username}:{path}"
+                if self._is_limited(user_key, self.auth_limit):
+                    response_data = {"detail": "Too many authentication attempts for this account. Please try again later."}
+                    return JsonResponse(response_data, status=429)
         return self.get_response(request)
+
+    def _is_limited(self, key, limit):
+        count = cache.get(key, 0)
+        if count >= limit:
+            return True
+        cache.set(key, count + 1, timeout=self.window)
+        return False
 
     def _is_auth_path(self, path):
         return any(pattern.match(path) for pattern in self.auth_patterns)

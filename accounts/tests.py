@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.contrib import admin
+from django.core.cache import cache
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
@@ -138,13 +139,22 @@ class PasswordChangeTests(TestCase):
 
 class SecurityMiddlewareTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user("ratelimituser", email="rate@example.com", password="StrongPass12345")
 
     def test_login_rate_limit_blocks_after_five_attempts_in_fifteen_minutes(self):
         for _ in range(5):
-            response = self.client.post(reverse("login"), {"username": "ratelimituser", "password": "badpass"})
+            response = self.client.post(
+                reverse("login"),
+                {"username": "ratelimituser", "password": "badpass"},
+                REMOTE_ADDR="172.16.0.10",
+            )
             self.assertIn(response.status_code, {200, 302})
-        blocked = self.client.post(reverse("login"), {"username": "ratelimituser", "password": "badpass"})
+        blocked = self.client.post(
+            reverse("login"),
+            {"username": "ratelimituser", "password": "badpass"},
+            REMOTE_ADDR="172.16.0.10",
+        )
         self.assertEqual(blocked.status_code, 429)
 
     def test_oversized_payload_is_rejected(self):
@@ -157,3 +167,9 @@ class SecurityMiddlewareTests(TestCase):
         self.client.login(username="ratelimituser", password="StrongPass12345")
         response = self.client.get(f"{reverse('ticket_list')}?q={'x' * 3000}")
         self.assertEqual(response.status_code, 414)
+
+    def test_auth_rate_limit_also_applies_per_username(self):
+        for _ in range(5):
+            self.client.post(reverse("login"), {"username": "ratelimituser", "password": "badpass"}, REMOTE_ADDR="10.0.0.1")
+        blocked = self.client.post(reverse("login"), {"username": "ratelimituser", "password": "badpass"}, REMOTE_ADDR="10.0.0.2")
+        self.assertEqual(blocked.status_code, 429)
