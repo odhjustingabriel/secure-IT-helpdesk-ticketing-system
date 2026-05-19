@@ -1,6 +1,6 @@
 # Secure IT Helpdesk Ticketing System
 
-A clean, beginner-friendly Django MVP for internal IT support and incident ticketing. The project uses Django, Django Templates, SQLite, console email, and custom CSS only, making it easy to run locally and strong as a portfolio project.
+A clean, beginner-friendly Django app for internal IT support and incident ticketing. The project uses Django, Django Templates, SQLite, console email, and custom CSS only, making it easy to run locally.
 
 ## Features
 
@@ -208,7 +208,7 @@ python manage.py seed_demo
 
 ## Project Scope
 
-This is intentionally an MVP, not an enterprise helpdesk suite. It does not use React, Docker, PostgreSQL, Django REST Framework, Celery, Redis, real-time chat, or advanced analytics. The code focuses on Django fundamentals, readable forms/views, role-based access control, and a complete ticket workflow.
+This project is intentionally focused, not an enterprise helpdesk suite. It does not use React, Docker, PostgreSQL, Django REST Framework, Celery, Redis, real-time chat, or advanced analytics. The code focuses on Django fundamentals, readable forms/views, role-based access control, and a complete ticket workflow.
 
 ## Future Improvements
 
@@ -220,6 +220,6 @@ This is intentionally an MVP, not an enterprise helpdesk suite. It does not use 
 - Team queues and SLA tracking.
 - Virus scanning for uploaded attachments.
 
-## Portfolio Summary
+## Summary
 
-Secure IT Helpdesk Ticketing System demonstrates a complete Django MVP with authentication, profile roles, secure ticket ownership rules, support staff workflow, audit logging, email notifications, file validation, custom template styling, seed data, and meaningful automated tests.
+Secure IT Helpdesk Ticketing System includes authentication, profile roles, secure ticket ownership rules, support staff workflow, audit logging, email notifications, file validation, custom template styling, seed data, and meaningful automated tests.
