@@ -240,7 +240,7 @@ This project is intentionally focused, not an enterprise helpdesk suite. It does
 
 Secure IT Helpdesk Ticketing System includes authentication, profile roles, secure ticket ownership rules, support staff workflow, audit logging, email notifications, file validation, custom template styling, seed data, and meaningful automated tests.
 
-## What I Learned (Cybersecurity Focus)
+## What I Learned
 
 - **Defense in depth matters:** Combining authentication controls, authorization checks, input validation, rate limiting, and security headers provides stronger protection than relying on any single control.
 - **Secure defaults reduce risk:** Keeping sensitive configuration in environment variables and validating production-critical settings (like `SECRET_KEY`) helps prevent avoidable misconfiguration issues.
@@ -248,7 +248,7 @@ Secure IT Helpdesk Ticketing System includes authentication, profile roles, secu
 - **Abuse resistance needs layered controls:** Per-IP and per-account throttling significantly improves resilience against brute-force patterns, especially when backed by shared cache infrastructure in multi-instance deployments.
 - **File uploads are a common attack surface:** Extension checks alone are not enough; combining size limits, type checks, and signature screening is a practical baseline hardening step.
 
-## What I Can Improve On (Cybersecurity Focus)
+## What I Can Improve On
 
 - **Deploy Redis-backed throttling in production:** Move from local memory cache to a centralized cache for consistent rate limiting and lockout behavior across all app instances.
 - **Add malware scanning for attachments:** Integrate antivirus/content inspection (for example, ClamAV pipeline) before making uploaded files available.
